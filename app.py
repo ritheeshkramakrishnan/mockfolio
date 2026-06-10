@@ -364,31 +364,109 @@ def init_db():
         db.commit()
     except Exception:
         pass
+    # migrate users: autopilot budget + risk controls
+    try:
+        db.execute("ALTER TABLE users ADD COLUMN autopilot_budget REAL DEFAULT 0")
+        db.commit()
+    except Exception:
+        pass
+    try:
+        db.execute("ALTER TABLE users ADD COLUMN autopilot_max_pct REAL DEFAULT 20")
+        db.commit()
+    except Exception:
+        pass
+    try:
+        db.execute("ALTER TABLE users ADD COLUMN autopilot_daily_loss_limit REAL DEFAULT 500")
+        db.commit()
+    except Exception:
+        pass
     _import_backup(db)
     _cleanup_snapshots(db)
     db.close()
 
 
+def _autopilot_deployed(user_id: int, db) -> float:
+    """Return total capital currently deployed in open autopilot positions (cost basis)."""
+    # sum of autopilot buys that haven't been fully sold
+    # we approximate by summing open position value for symbols ever bought by autopilot
+    ap_symbols = {r["symbol"] for r in db.execute(
+        "SELECT DISTINCT symbol FROM trades WHERE user_id=? AND source='autopilot' AND side='buy'",
+        (user_id,)
+    ).fetchall()}
+    if not ap_symbols:
+        return 0.0
+    deployed = 0.0
+    for sym in ap_symbols:
+        pos = db.execute(
+            "SELECT qty, avg_price FROM positions WHERE user_id=? AND symbol=? AND side='long'",
+            (user_id, sym)
+        ).fetchone()
+        if pos:
+            deployed += pos["qty"] * pos["avg_price"]
+    return deployed
+
+
+def _autopilot_today_pnl(user_id: int, db) -> float:
+    """Return today's realized P&L from autopilot sell trades."""
+    today = datetime.now().strftime("%Y-%m-%d")
+    row = db.execute(
+        "SELECT COALESCE(SUM(pnl),0) as total FROM trades "
+        "WHERE user_id=? AND source='autopilot' AND side='sell' AND executed_at LIKE ?",
+        (user_id, today + "%")
+    ).fetchone()
+    return float(row["total"] or 0)
+
+
 def _run_autopilot(user_id: int, db) -> list:
     """
     Claude analyzes the portfolio and market, then executes trades automatically.
+    Respects autopilot_budget (ring-fenced capital) and autopilot_daily_loss_limit.
     Returns a list of log entries for what was done.
     """
     if not _ai_client:
         return []
 
-    user_row = db.execute("SELECT balance, phase FROM users WHERE id=?", (user_id,)).fetchone()
+    user_row = db.execute(
+        "SELECT balance, phase, autopilot_budget, autopilot_max_pct, autopilot_daily_loss_limit FROM users WHERE id=?",
+        (user_id,)
+    ).fetchone()
     if not user_row:
         return []
 
-    positions = db.execute("SELECT * FROM positions WHERE user_id=?", (user_id,)).fetchall()
     balance = user_row["balance"]
+    budget          = float(user_row["autopilot_budget"]       or 0)
+    max_pct         = float(user_row["autopilot_max_pct"]       or 20) / 100.0
+    daily_loss_limit = float(user_row["autopilot_daily_loss_limit"] or 500)
+
+    # ── daily loss circuit-breaker ────────────────────────────────────────────
+    today_pnl = _autopilot_today_pnl(user_id, db)
+    if today_pnl <= -abs(daily_loss_limit):
+        log_reason = f"Daily loss limit hit (${today_pnl:+.2f} today, limit -${daily_loss_limit:.0f}). Autopilot paused for today."
+        db.execute(
+            "INSERT INTO autopilot_log (user_id,action,symbol,qty,price,reasoning) VALUES (?,?,?,?,?,?)",
+            (user_id, "PAUSED", None, None, None, log_reason)
+        )
+        db.commit()
+        return [{"action": "PAUSED", "symbol": None, "qty": 0, "reasoning": log_reason}]
+
+    # ── determine working capital ─────────────────────────────────────────────
+    if budget > 0:
+        deployed     = _autopilot_deployed(user_id, db)
+        available    = max(0, budget - deployed)
+        working_cash = min(available, balance)  # can't spend more than actual balance
+    else:
+        working_cash = balance  # no budget cap — use full balance (legacy mode)
+
+    positions = db.execute("SELECT * FROM positions WHERE user_id=?", (user_id,)).fetchall()
 
     # build positions summary with live prices
     pos_summary = []
     prices = {}
-    watchlist = ["AAPL","TSLA","NVDA","SPY","MSFT","META","AMZN","GOOGL","QQQ"]
-    symbols_to_check = list({p["symbol"] for p in positions} | set(watchlist[:5]))
+    watchlist_rows = db.execute(
+        "SELECT symbol FROM watchlist WHERE user_id=?", (user_id,)
+    ).fetchall()
+    watchlist_syms = [r["symbol"] for r in watchlist_rows] or ["AAPL","TSLA","NVDA","SPY","MSFT"]
+    symbols_to_check = list({p["symbol"] for p in positions} | set(watchlist_syms[:6]))
 
     for sym in symbols_to_check:
         try:
@@ -403,14 +481,24 @@ def _run_autopilot(user_id: int, db) -> list:
         unreal_pnl = (cur - p["avg_price"]) * p["qty"]
         pos_summary.append(f"{sym}: {p['qty']} shares @ avg ${p['avg_price']:.2f}, now ${cur:.2f}, P&L ${unreal_pnl:+.2f}")
 
-    # fetch recent news headlines for context
     articles = _fetch_news()
     headlines = "\n".join(f"- {a['title']}" for a in articles[:8]) if articles else "No recent news."
+
+    budget_note = (
+        f"- Autopilot budget: ${budget:,.2f} total | ${working_cash:,.2f} available to deploy\n"
+        f"- Max per trade: {max_pct*100:.0f}% of available (${working_cash*max_pct:,.2f})\n"
+        f"- Daily loss limit: ${daily_loss_limit:,.0f} | Today P&L so far: ${today_pnl:+.2f}"
+        if budget > 0 else
+        f"- Cash available: ${working_cash:,.2f}\n"
+        f"- Max per trade: {max_pct*100:.0f}% of cash (${working_cash*max_pct:,.2f})\n"
+        f"- Daily loss limit: ${daily_loss_limit:,.0f} | Today P&L so far: ${today_pnl:+.2f}"
+    )
 
     prompt = f"""You are an AI autopilot managing a paper trading portfolio. Make trading decisions NOW.
 
 PORTFOLIO:
 - Cash balance: ${balance:,.2f}
+{budget_note}
 - Open positions ({len(positions)}):
 {chr(10).join(pos_summary) if pos_summary else '  None'}
 
@@ -421,10 +509,10 @@ RECENT NEWS:
 {headlines}
 
 RULES:
-- Max 20% of cash balance per single buy trade
+- Max {max_pct*100:.0f}% of available capital per single buy trade
 - Max 6 open positions total
-- Only buy if there is a strong reason
-- You may sell a position partially or fully if it looks risky or has hit a good profit
+- Only buy if there is a strong catalyst
+- Sell positions that have hit profit targets or are showing weakness
 - If no good trades exist, return HOLD
 
 Respond ONLY with valid JSON, no explanation outside the JSON:
@@ -441,7 +529,6 @@ Respond ONLY with valid JSON, no explanation outside the JSON:
             messages=[{"role": "user", "content": prompt}]
         )
         raw = response.content[0].text.strip()
-        # extract JSON array
         start = raw.find("[")
         end = raw.rfind("]") + 1
         decisions = json.loads(raw[start:end])
@@ -464,15 +551,22 @@ Respond ONLY with valid JSON, no explanation outside the JSON:
                 try: price, _ = _get_price(symbol)
                 except: continue
             cost = price * qty
-            if cost > balance * 0.20:
-                qty = max(1, int((balance * 0.20) / price))
+            max_spend = working_cash * max_pct
+            if cost > max_spend:
+                qty = max(1, int(max_spend / price))
                 cost = price * qty
             open_count = db.execute(
                 "SELECT COUNT(*) as n FROM positions WHERE user_id=?", (user_id,)
             ).fetchone()["n"]
-            if open_count >= 6 or balance < cost:
-                action = "HOLD"
-                reason = f"Skipped BUY {symbol}: {'too many positions' if open_count >= 6 else 'insufficient balance'}"
+            if open_count >= 6:
+                action = "SKIP"
+                reason = f"Skipped BUY {symbol}: max 6 positions reached"
+            elif balance < cost:
+                action = "SKIP"
+                reason = f"Skipped BUY {symbol}: insufficient balance (need ${cost:.2f}, have ${balance:.2f})"
+            elif working_cash < cost:
+                action = "SKIP"
+                reason = f"Skipped BUY {symbol}: autopilot budget exhausted (available ${working_cash:.2f})"
             else:
                 db.execute("UPDATE users SET balance=balance-? WHERE id=?", (cost, user_id))
                 pos = db.execute(
@@ -493,6 +587,7 @@ Respond ONLY with valid JSON, no explanation outside the JSON:
                     (user_id, symbol, qty, price, reason)
                 )
                 balance -= cost
+                working_cash -= cost
                 executed_price = price
 
         elif action == "SELL" and symbol and qty > 0:
@@ -1103,6 +1198,144 @@ def api_autopilot_run():
         return jsonify({"ok": False, "message": "No Anthropic API key configured"}), 400
     results = _run_autopilot(user["id"], db)
     return jsonify({"ok": True, "trades": results})
+
+
+@app.route("/autopilot")
+@login_required
+def autopilot_page():
+    return render_template("autopilot.html")
+
+
+@app.route("/api/autopilot/config", methods=["GET"])
+@login_required
+def api_autopilot_config_get():
+    user = current_user()
+    db = get_db()
+    row = db.execute(
+        "SELECT autopilot, autopilot_budget, autopilot_max_pct, autopilot_daily_loss_limit FROM users WHERE id=?",
+        (user["id"],)
+    ).fetchone()
+    return jsonify({
+        "enabled":           bool(row["autopilot"]) if row else False,
+        "budget":            float(row["autopilot_budget"] or 0) if row else 0,
+        "max_pct":           float(row["autopilot_max_pct"] or 20) if row else 20,
+        "daily_loss_limit":  float(row["autopilot_daily_loss_limit"] or 500) if row else 500,
+        "ai_available":      bool(_ai_client),
+    })
+
+
+@app.route("/api/autopilot/config", methods=["POST"])
+@login_required
+def api_autopilot_config_set():
+    data    = request.get_json() or {}
+    user    = current_user()
+    db      = get_db()
+
+    budget          = float(data.get("budget", 0))
+    max_pct         = float(data.get("max_pct", 20))
+    daily_loss_limit = float(data.get("daily_loss_limit", 500))
+
+    # clamp values
+    budget           = max(0, budget)
+    max_pct          = max(5, min(100, max_pct))
+    daily_loss_limit = max(0, daily_loss_limit)
+
+    db.execute(
+        "UPDATE users SET autopilot_budget=?, autopilot_max_pct=?, autopilot_daily_loss_limit=? WHERE id=?",
+        (budget, max_pct, daily_loss_limit, user["id"])
+    )
+    db.commit()
+    return jsonify({"ok": True, "budget": budget, "max_pct": max_pct, "daily_loss_limit": daily_loss_limit})
+
+
+@app.route("/api/autopilot/stats")
+@login_required
+def api_autopilot_stats():
+    user = current_user()
+    db   = get_db()
+
+    row = db.execute(
+        "SELECT autopilot, autopilot_budget, autopilot_max_pct, autopilot_daily_loss_limit, balance FROM users WHERE id=?",
+        (user["id"],)
+    ).fetchone()
+
+    budget           = float(row["autopilot_budget"] or 0)
+    deployed         = _autopilot_deployed(user["id"], db)
+    available        = max(0, budget - deployed) if budget > 0 else float(row["balance"])
+    today_pnl        = _autopilot_today_pnl(user["id"], db)
+
+    # all-time autopilot realized P&L
+    total_pnl_row = db.execute(
+        "SELECT COALESCE(SUM(pnl),0) as total FROM trades WHERE user_id=? AND source='autopilot' AND side='sell'",
+        (user["id"],)
+    ).fetchone()
+    total_pnl = float(total_pnl_row["total"] or 0)
+
+    # trade counts
+    trade_count = db.execute(
+        "SELECT COUNT(*) as n FROM trades WHERE user_id=? AND source='autopilot'",
+        (user["id"],)
+    ).fetchone()["n"]
+
+    today = datetime.now().strftime("%Y-%m-%d")
+    today_trades = db.execute(
+        "SELECT COUNT(*) as n FROM trades WHERE user_id=? AND source='autopilot' AND executed_at LIKE ?",
+        (user["id"], today + "%")
+    ).fetchone()["n"]
+
+    # last 10 autopilot log entries
+    logs = db.execute(
+        "SELECT action, symbol, qty, price, reasoning, executed_at FROM autopilot_log "
+        "WHERE user_id=? ORDER BY executed_at DESC LIMIT 10",
+        (user["id"],)
+    ).fetchall()
+
+    # open positions opened by autopilot
+    ap_symbols = {r["symbol"] for r in db.execute(
+        "SELECT DISTINCT symbol FROM trades WHERE user_id=? AND source='autopilot' AND side='buy'",
+        (user["id"],)
+    ).fetchall()}
+    ap_positions = []
+    for sym in ap_symbols:
+        pos = db.execute(
+            "SELECT symbol, qty, avg_price FROM positions WHERE user_id=? AND symbol=? AND side='long'",
+            (user["id"], sym)
+        ).fetchone()
+        if pos:
+            try:
+                cur_price, _ = _get_price(sym)
+                unreal = round((cur_price - pos["avg_price"]) * pos["qty"], 2)
+            except Exception:
+                cur_price = pos["avg_price"]
+                unreal = 0.0
+            ap_positions.append({
+                "symbol":        sym,
+                "qty":           pos["qty"],
+                "avg_price":     pos["avg_price"],
+                "current_price": round(cur_price, 2),
+                "market_value":  round(cur_price * pos["qty"], 2),
+                "unrealized_pnl": unreal,
+            })
+
+    daily_loss_limit = float(row["autopilot_daily_loss_limit"] or 500)
+    paused_today = today_pnl <= -abs(daily_loss_limit)
+
+    return jsonify({
+        "enabled":           bool(row["autopilot"]),
+        "budget":            budget,
+        "deployed":          round(deployed, 2),
+        "available":         round(available, 2),
+        "today_pnl":         round(today_pnl, 2),
+        "total_pnl":         round(total_pnl, 2),
+        "trade_count":       trade_count,
+        "today_trades":      today_trades,
+        "paused_today":      paused_today,
+        "daily_loss_limit":  daily_loss_limit,
+        "max_pct":           float(row["autopilot_max_pct"] or 20),
+        "logs":              [dict(l) for l in logs],
+        "positions":         ap_positions,
+        "ai_available":      bool(_ai_client),
+    })
 
 
 # ── Black-Scholes engine ──────────────────────────────────────────────────────
