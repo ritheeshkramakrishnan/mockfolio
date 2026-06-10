@@ -348,39 +348,21 @@ def init_db():
         """
     db.executescript(schema)
     db.commit()
-    # add autopilot column to existing users tables (migration)
-    try:
-        db.execute("ALTER TABLE users ADD COLUMN autopilot INTEGER DEFAULT 0")
-        db.commit()
-    except Exception:
-        pass  # column already exists
-    # migrate trades table: add source + ai_reasoning columns
-    try:
-        db.execute("ALTER TABLE trades ADD COLUMN source TEXT DEFAULT 'manual'")
-        db.commit()
-    except Exception:
-        pass
-    try:
-        db.execute("ALTER TABLE trades ADD COLUMN ai_reasoning TEXT")
-        db.commit()
-    except Exception:
-        pass
-    # migrate users: autopilot budget + risk controls
-    try:
-        db.execute("ALTER TABLE users ADD COLUMN autopilot_budget REAL DEFAULT 0")
-        db.commit()
-    except Exception:
-        pass
-    try:
-        db.execute("ALTER TABLE users ADD COLUMN autopilot_max_pct REAL DEFAULT 20")
-        db.commit()
-    except Exception:
-        pass
-    try:
-        db.execute("ALTER TABLE users ADD COLUMN autopilot_daily_loss_limit REAL DEFAULT 500")
-        db.commit()
-    except Exception:
-        pass
+    def _migrate(sql):
+        """Run a single ALTER TABLE safely — rollback on failure so next migration can proceed."""
+        try:
+            db.execute(sql)
+            db.commit()
+        except Exception:
+            try: db.rollback()
+            except Exception: pass
+
+    _migrate("ALTER TABLE users ADD COLUMN autopilot INTEGER DEFAULT 0")
+    _migrate("ALTER TABLE trades ADD COLUMN source TEXT DEFAULT 'manual'")
+    _migrate("ALTER TABLE trades ADD COLUMN ai_reasoning TEXT")
+    _migrate("ALTER TABLE users ADD COLUMN autopilot_budget REAL DEFAULT 0")
+    _migrate("ALTER TABLE users ADD COLUMN autopilot_max_pct REAL DEFAULT 20")
+    _migrate("ALTER TABLE users ADD COLUMN autopilot_daily_loss_limit REAL DEFAULT 500")
     _import_backup(db)
     _cleanup_snapshots(db)
     db.close()
@@ -430,17 +412,28 @@ def _run_autopilot(user_id: int, db) -> list:
     if not _ai_client:
         return []
 
-    user_row = db.execute(
-        "SELECT balance, phase, autopilot_budget, autopilot_max_pct, autopilot_daily_loss_limit FROM users WHERE id=?",
-        (user_id,)
-    ).fetchone()
+    try:
+        user_row = db.execute(
+            "SELECT balance, phase, autopilot_budget, autopilot_max_pct, autopilot_daily_loss_limit FROM users WHERE id=?",
+            (user_id,)
+        ).fetchone()
+    except Exception:
+        try: db.rollback()
+        except Exception: pass
+        user_row = db.execute("SELECT balance, phase FROM users WHERE id=?", (user_id,)).fetchone()
+
     if not user_row:
         return []
 
     balance = user_row["balance"]
-    budget          = float(user_row["autopilot_budget"]       or 0)
-    max_pct         = float(user_row["autopilot_max_pct"]       or 20) / 100.0
-    daily_loss_limit = float(user_row["autopilot_daily_loss_limit"] or 500)
+    try:
+        budget           = float(user_row["autopilot_budget"]           or 0)
+        max_pct          = float(user_row["autopilot_max_pct"]           or 20) / 100.0
+        daily_loss_limit = float(user_row["autopilot_daily_loss_limit"]  or 500)
+    except Exception:
+        budget = 0
+        max_pct = 0.20
+        daily_loss_limit = 500
 
     # ── daily loss circuit-breaker ────────────────────────────────────────────
     today_pnl = _autopilot_today_pnl(user_id, db)
@@ -1193,15 +1186,19 @@ def api_autopilot_toggle():
 @app.route("/api/autopilot/run", methods=["POST"])
 @login_required
 def api_autopilot_run():
-    user = current_user()
-    db = get_db()
-    row = db.execute("SELECT autopilot FROM users WHERE id=?", (user["id"],)).fetchone()
-    if not row or not row["autopilot"]:
-        return jsonify({"ok": False, "message": "Autopilot is off"}), 400
-    if not _ai_client:
-        return jsonify({"ok": False, "message": "No Anthropic API key configured"}), 400
-    results = _run_autopilot(user["id"], db)
-    return jsonify({"ok": True, "trades": results})
+    try:
+        user = current_user()
+        db = get_db()
+        row = db.execute("SELECT autopilot FROM users WHERE id=?", (user["id"],)).fetchone()
+        if not row or not row["autopilot"]:
+            return jsonify({"ok": False, "message": "Autopilot is off — enable it first"}), 400
+        if not _ai_client:
+            return jsonify({"ok": False, "message": "No Anthropic API key configured"}), 400
+        results = _run_autopilot(user["id"], db)
+        return jsonify({"ok": True, "trades": results})
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return jsonify({"ok": False, "message": str(e)}), 500
 
 
 @app.route("/autopilot")
