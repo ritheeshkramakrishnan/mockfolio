@@ -82,10 +82,11 @@
           <div style="font-weight:700;margin-bottom:1rem;font-size:.95rem;">💰 Budget Allocation</div>
 
           <label style="font-size:.78rem;color:var(--muted);display:block;margin-bottom:.3rem;">Amount to allocate to AI ($)</label>
-          <div style="display:flex;gap:.5rem;margin-bottom:.75rem;">
+          <div style="display:flex;gap:.5rem;margin-bottom:.3rem;">
             <input id="budgetInput" type="number" min="0" step="500" placeholder="e.g. 10000"
               style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.45rem .7rem;border-radius:8px;font-size:.9rem;"/>
           </div>
+          <div id="savedBudgetHint" style="font-size:.72rem;color:var(--accent);margin-bottom:.6rem;min-height:1em;"></div>
 
           <!-- Quick budget presets -->
           <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1rem;">
@@ -110,7 +111,8 @@
 
           <label style="font-size:.78rem;color:var(--muted);display:block;margin-bottom:.3rem;">Daily loss limit ($)</label>
           <input id="dailyLossInput" type="number" min="0" step="100" placeholder="e.g. 500"
-            style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.45rem .7rem;border-radius:8px;font-size:.9rem;margin-bottom:1rem;"/>
+            style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.45rem .7rem;border-radius:8px;font-size:.9rem;margin-bottom:.3rem;"/>
+          <div id="savedLossHint" style="font-size:.72rem;color:var(--accent);margin-bottom:.75rem;min-height:1em;"></div>
 
           <button onclick="saveConfig()" class="btn btn-green" style="width:100%;font-size:.88rem;">
             💾 Save Settings
@@ -252,16 +254,35 @@ async function loadStats() {
   renderFeed(res.logs || []);
 }
 
+function _applyConfig(cfg) {
+  if (!cfg) return;
+  if (cfg.budget)           document.getElementById('budgetInput').value     = cfg.budget;
+  if (cfg.max_pct)          document.getElementById('maxPctInput').value     = cfg.max_pct;
+  document.getElementById('maxPctVal').textContent = (cfg.max_pct || 20) + '%';
+  if (cfg.daily_loss_limit) document.getElementById('dailyLossInput').value  = cfg.daily_loss_limit;
+  // show saved-value hints under each field
+  const b = document.getElementById('savedBudgetHint');
+  const d = document.getElementById('savedLossHint');
+  if (b && cfg.budget > 0) b.textContent = `Saved: $${parseFloat(cfg.budget).toLocaleString()}`;
+  if (d && cfg.daily_loss_limit > 0) d.textContent = `Saved: $${parseFloat(cfg.daily_loss_limit).toLocaleString()}`;
+}
+
 async function loadConfig() {
+  // 1. Apply localStorage instantly (no network round-trip)
+  try {
+    const local = JSON.parse(localStorage.getItem('ap_config') || 'null');
+    if (local) _applyConfig(local);
+  } catch(e) {}
+
+  // 2. Then fetch from server and overwrite
   try {
     const r = await fetch('/api/autopilot/config');
     if (!r.ok) return;
     const cfg = await r.json();
-    document.getElementById('budgetInput').value     = cfg.budget || '';
-    document.getElementById('maxPctInput').value     = cfg.max_pct || 20;
-    document.getElementById('maxPctVal').textContent = (cfg.max_pct || 20) + '%';
-    document.getElementById('dailyLossInput').value  = cfg.daily_loss_limit || 500;
-  } catch(e) { /* silently skip — defaults are fine */ }
+    _applyConfig(cfg);
+    // keep localStorage in sync with server
+    localStorage.setItem('ap_config', JSON.stringify(cfg));
+  } catch(e) {}
 }
 
 function setBudgetPreset(val) {
@@ -269,14 +290,31 @@ function setBudgetPreset(val) {
 }
 
 async function saveConfig() {
-  const budget         = parseFloat(document.getElementById('budgetInput').value)     || 0;
-  const max_pct        = parseFloat(document.getElementById('maxPctInput').value)     || 20;
-  const daily_loss_limit = parseFloat(document.getElementById('dailyLossInput').value) || 500;
-  await fetch('/api/autopilot/config', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({budget, max_pct, daily_loss_limit})
-  });
+  const budget           = parseFloat(document.getElementById('budgetInput').value)      || 0;
+  const max_pct          = parseFloat(document.getElementById('maxPctInput').value)      || 20;
+  const daily_loss_limit = parseFloat(document.getElementById('dailyLossInput').value)   || 500;
+
+  // Save to localStorage immediately so it survives page reloads even if server is slow
+  localStorage.setItem('ap_config', JSON.stringify({budget, max_pct, daily_loss_limit}));
+
+  try {
+    const r = await fetch('/api/autopilot/config', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({budget, max_pct, daily_loss_limit})
+    });
+    if (!r.ok) throw new Error('Server error ' + r.status);
+  } catch(e) {
+    alert('Could not save to server: ' + e.message + '\n\nSettings saved locally and will sync on next load.');
+    return;
+  }
+
+  // Update the saved-value hints
+  const b = document.getElementById('savedBudgetHint');
+  const d = document.getElementById('savedLossHint');
+  if (b) b.textContent = budget > 0 ? `Saved: $${budget.toLocaleString()}` : '';
+  if (d) d.textContent = daily_loss_limit > 0 ? `Saved: $${daily_loss_limit.toLocaleString()}` : '';
+
   const msg = document.getElementById('saveMsg');
   msg.style.display = 'block';
   setTimeout(() => { msg.style.display = 'none'; }, 2500);
