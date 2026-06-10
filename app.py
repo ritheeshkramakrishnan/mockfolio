@@ -91,8 +91,9 @@ class _PgConn:
             cur.execute(stmt)
         cur.close()
 
-    def commit(self):   self._conn.commit()
-    def close(self):    self._conn.close()
+    def commit(self):    self._conn.commit()
+    def rollback(self):  self._conn.rollback()
+    def close(self):     self._conn.close()
 
 
 # ── persistent local data directory (~/Documents/MockFolio_Data/) ─────────────
@@ -1227,11 +1228,15 @@ def api_autopilot_config_get():
             "ai_available":     bool(_ai_client),
         })
     except Exception:
-        row = db.execute("SELECT autopilot FROM users WHERE id=?", (user["id"],)).fetchone()
+        try:
+            if hasattr(db, 'rollback'): db.rollback()
+            row = db.execute("SELECT autopilot FROM users WHERE id=?", (user["id"],)).fetchone()
+            enabled = bool(row["autopilot"]) if row else False
+        except Exception:
+            enabled = False
         return jsonify({
-            "enabled": bool(row["autopilot"]) if row else False,
-            "budget": 0, "max_pct": 20, "daily_loss_limit": 500,
-            "ai_available": bool(_ai_client),
+            "enabled": enabled, "budget": 0, "max_pct": 20,
+            "daily_loss_limit": 500, "ai_available": bool(_ai_client),
         })
 
 
@@ -1266,11 +1271,18 @@ def api_autopilot_stats():
     db   = get_db()
 
     def _safe_default(err=""):
-        base = db.execute("SELECT autopilot, balance FROM users WHERE id=?", (user["id"],)).fetchone()
+        # rollback any aborted postgres transaction before retrying
+        try:
+            if hasattr(db, 'rollback'):
+                db.rollback()
+            base = db.execute("SELECT autopilot, balance FROM users WHERE id=?", (user["id"],)).fetchone()
+            enabled = bool(base["autopilot"]) if base else False
+            avail   = float(base["balance"])  if base else 0
+        except Exception:
+            enabled = False
+            avail   = 0
         return jsonify({
-            "enabled": bool(base["autopilot"]) if base else False,
-            "budget": 0, "deployed": 0,
-            "available": float(base["balance"]) if base else 0,
+            "enabled": enabled, "budget": 0, "deployed": 0, "available": avail,
             "today_pnl": 0, "total_pnl": 0, "trade_count": 0, "today_trades": 0,
             "paused_today": False, "daily_loss_limit": 500, "max_pct": 20,
             "logs": [], "positions": [], "ai_available": bool(_ai_client),
