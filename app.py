@@ -408,13 +408,16 @@ def _autopilot_deployed(user_id: int, db) -> float:
 
 def _autopilot_today_pnl(user_id: int, db) -> float:
     """Return today's realized P&L from autopilot sell trades."""
-    today = datetime.now().strftime("%Y-%m-%d")
-    row = db.execute(
-        "SELECT COALESCE(SUM(pnl),0) as total FROM trades "
-        "WHERE user_id=? AND source='autopilot' AND side='sell' AND executed_at LIKE ?",
-        (user_id, today + "%")
-    ).fetchone()
-    return float(row["total"] or 0)
+    today = datetime.now().date().isoformat()
+    try:
+        row = db.execute(
+            "SELECT COALESCE(SUM(pnl),0) as total FROM trades "
+            "WHERE user_id=? AND source='autopilot' AND side='sell' AND DATE(executed_at) = ?",
+            (user_id, today)
+        ).fetchone()
+        return float(row["total"] or 0)
+    except Exception:
+        return 0.0
 
 
 def _run_autopilot(user_id: int, db) -> list:
@@ -1254,10 +1257,21 @@ def api_autopilot_stats():
     user = current_user()
     db   = get_db()
 
-    row = db.execute(
-        "SELECT autopilot, autopilot_budget, autopilot_max_pct, autopilot_daily_loss_limit, balance FROM users WHERE id=?",
-        (user["id"],)
-    ).fetchone()
+    try:
+        row = db.execute(
+            "SELECT autopilot, autopilot_budget, autopilot_max_pct, autopilot_daily_loss_limit, balance FROM users WHERE id=?",
+            (user["id"],)
+        ).fetchone()
+    except Exception:
+        # columns may not exist yet — return safe defaults
+        row = db.execute("SELECT autopilot, balance FROM users WHERE id=?", (user["id"],)).fetchone()
+        return jsonify({
+            "enabled": bool(row["autopilot"]) if row else False,
+            "budget": 0, "deployed": 0, "available": float(row["balance"]) if row else 0,
+            "today_pnl": 0, "total_pnl": 0, "trade_count": 0, "today_trades": 0,
+            "paused_today": False, "daily_loss_limit": 500, "max_pct": 20,
+            "logs": [], "positions": [], "ai_available": bool(_ai_client),
+        })
 
     budget           = float(row["autopilot_budget"] or 0)
     deployed         = _autopilot_deployed(user["id"], db)
@@ -1277,11 +1291,14 @@ def api_autopilot_stats():
         (user["id"],)
     ).fetchone()["n"]
 
-    today = datetime.now().strftime("%Y-%m-%d")
-    today_trades = db.execute(
-        "SELECT COUNT(*) as n FROM trades WHERE user_id=? AND source='autopilot' AND executed_at LIKE ?",
-        (user["id"], today + "%")
-    ).fetchone()["n"]
+    today = datetime.now().date().isoformat()
+    try:
+        today_trades = db.execute(
+            "SELECT COUNT(*) as n FROM trades WHERE user_id=? AND source='autopilot' AND DATE(executed_at) = ?",
+            (user["id"], today)
+        ).fetchone()["n"]
+    except Exception:
+        today_trades = 0
 
     # last 10 autopilot log entries
     logs = db.execute(

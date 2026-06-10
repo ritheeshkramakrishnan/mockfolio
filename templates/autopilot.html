@@ -179,7 +179,24 @@ const fmtT = ts => {
 let _stats = null;
 
 async function loadStats() {
-  const res = await fetch('/api/autopilot/stats').then(r => r.json());
+  let res;
+  try {
+    const r = await fetch('/api/autopilot/stats');
+    if (!r.ok) { throw new Error('HTTP ' + r.status + ': ' + await r.text()); }
+    res = await r.json();
+  } catch(e) {
+    document.getElementById('toggleBtn').textContent = '▶ Enable Autopilot';
+    document.getElementById('toggleBtn').className = 'btn btn-green';
+    document.getElementById('toggleBtn').style.cssText = 'font-size:.95rem;padding:.5rem 1.2rem;min-width:140px;';
+    const banner = document.getElementById('statusBanner');
+    banner.style.display = 'block';
+    banner.style.background = 'rgba(255,100,100,.12)';
+    banner.style.color = 'var(--red)';
+    banner.style.border = '1px solid rgba(255,100,100,.25)';
+    banner.textContent = '⚠️ Failed to load autopilot data: ' + e.message + ' — try refreshing the page.';
+    document.getElementById('apFeed').innerHTML = '<div style="color:var(--muted);font-size:.85rem;text-align:center;padding:1rem 0;">Could not load data</div>';
+    return;
+  }
   _stats = res;
 
   // toggle button
@@ -236,11 +253,15 @@ async function loadStats() {
 }
 
 async function loadConfig() {
-  const cfg = await fetch('/api/autopilot/config').then(r => r.json());
-  document.getElementById('budgetInput').value    = cfg.budget || '';
-  document.getElementById('maxPctInput').value    = cfg.max_pct || 20;
-  document.getElementById('maxPctVal').textContent = (cfg.max_pct || 20) + '%';
-  document.getElementById('dailyLossInput').value = cfg.daily_loss_limit || 500;
+  try {
+    const r = await fetch('/api/autopilot/config');
+    if (!r.ok) return;
+    const cfg = await r.json();
+    document.getElementById('budgetInput').value     = cfg.budget || '';
+    document.getElementById('maxPctInput').value     = cfg.max_pct || 20;
+    document.getElementById('maxPctVal').textContent = (cfg.max_pct || 20) + '%';
+    document.getElementById('dailyLossInput').value  = cfg.daily_loss_limit || 500;
+  } catch(e) { /* silently skip — defaults are fine */ }
 }
 
 function setBudgetPreset(val) {
