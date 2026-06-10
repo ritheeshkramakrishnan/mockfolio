@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Market Calls — MockFolio</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="/">Mock<span>Folio</span></a>
+  <div class="nav-links">
+    <span id="navUser" style="color:var(--muted);font-size:.9rem;"></span>
+    <a href="/logout" class="btn btn-secondary" style="padding:.4rem .9rem;font-size:.85rem;">Log Out</a>
+  </div>
+</nav>
+
+<div class="app-layout">
+  <aside class="sidebar">
+    <a href="/dashboard"><span class="icon">🏠</span> Dashboard</a>
+    <a href="/trade"><span class="icon">💹</span> Trade</a>
+    <a href="/options"><span class="icon">📊</span> Options</a>
+    <a href="/calls" class="active"><span class="icon">📡</span> Market Calls</a>
+    <a href="/signals"><span class="icon">🤖</span> AI Signals</a>
+    <a href="/activity"><span class="icon">📋</span> Activity Log</a>
+    <a href="/learn"><span class="icon">📚</span> AI Tutor</a>
+    <a href="/flashcards"><span class="icon">🃏</span> Flashcards</a>
+  </aside>
+
+  <main class="main-content">
+    <div class="section-head" style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div>
+        <h2>AI Market Calls</h2>
+        <p style="color:var(--muted);font-size:.9rem;">Add symbols to your watchlist — AI monitors them and makes trade calls</p>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.4rem;">
+        <button id="genBtn" onclick="generateCalls()" class="btn btn-green">⚡ Generate Fresh Calls</button>
+        <span id="lastGenLabel" style="font-size:.72rem;color:var(--muted);display:none;">Last generated: <b id="lastGenTime">—</b></span>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:260px 1fr;gap:1.5rem;align-items:start;">
+
+      <!-- Watchlist -->
+      <div>
+        <div class="card" style="padding:1.2rem 1.4rem;">
+          <div style="font-size:.85rem;font-weight:700;margin-bottom:.75rem;color:var(--text);">📋 Watchlist</div>
+          <div style="display:flex;gap:.5rem;margin-bottom:.75rem;">
+            <input id="watchInput" type="text" placeholder="Symbol…"
+              style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.4rem .6rem;border-radius:8px;font-size:.85rem;width:100%;text-transform:uppercase;"
+              onkeydown="if(event.key==='Enter') addWatch()"/>
+            <button onclick="addWatch()" class="btn btn-green" style="padding:.4rem .7rem;font-size:.85rem;">+</button>
+          </div>
+          <div id="watchlistItems" style="display:flex;flex-direction:column;gap:.4rem;"></div>
+          <p id="watchEmpty" style="color:var(--muted);font-size:.82rem;margin:.5rem 0 0;">Add symbols like AAPL, TSLA, NVDA…</p>
+        </div>
+
+        <!-- Quick adds -->
+        <div class="card" style="padding:1rem 1.4rem;margin-top:.75rem;">
+          <div style="font-size:.78rem;color:var(--muted);margin-bottom:.6rem;">QUICK ADD</div>
+          <div style="display:flex;flex-wrap:wrap;gap:.4rem;">
+            <button class="btn btn-secondary" style="padding:.2rem .6rem;font-size:.75rem;" onclick="quickAdd('AAPL')">AAPL</button>
+            <button class="btn btn-secondary" style="padding:.2rem .6rem;font-size:.75rem;" onclick="quickAdd('TSLA')">TSLA</button>
+            <button class="btn btn-secondary" style="padding:.2rem .6rem;font-size:.75rem;" onclick="quickAdd('NVDA')">NVDA</button>
+            <button class="btn btn-secondary" style="padding:.2rem .6rem;font-size:.75rem;" onclick="quickAdd('SPY')">SPY</button>
+            <button class="btn btn-secondary" style="padding:.2rem .6rem;font-size:.75rem;" onclick="quickAdd('MSFT')">MSFT</button>
+            <button class="btn btn-secondary" style="padding:.2rem .6rem;font-size:.75rem;" onclick="quickAdd('META')">META</button>
+            <button class="btn btn-secondary" style="padding:.2rem .6rem;font-size:.75rem;" onclick="quickAdd('AMZN')">AMZN</button>
+            <button class="btn btn-secondary" style="padding:.2rem .6rem;font-size:.75rem;" onclick="quickAdd('QQQ')">QQQ</button>
+            <button class="btn btn-secondary" style="padding:.2rem .6rem;font-size:.75rem;" onclick="quickAdd('GOOGL')">GOOGL</button>
+            <button class="btn btn-secondary" style="padding:.2rem .6rem;font-size:.75rem;" onclick="quickAdd('BTC')">BTC</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Calls feed -->
+      <div>
+        <div id="callsLoading" class="card" style="padding:2rem;text-align:center;color:var(--muted);display:none;">
+          <div style="font-size:1.5rem;margin-bottom:.5rem;">⏳</div>
+          <div>AI is analyzing your watchlist…</div>
+        </div>
+
+        <div id="callsEmpty" class="card" style="padding:2rem;text-align:center;color:var(--muted);">
+          <div style="font-size:2rem;margin-bottom:.75rem;">📡</div>
+          <div style="font-weight:600;margin-bottom:.4rem;">No calls yet</div>
+          <div style="font-size:.85rem;">Add symbols to your watchlist and click <b>Generate Calls</b></div>
+        </div>
+
+        <div id="callsFeed" style="display:flex;flex-direction:column;gap:1rem;"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const fmt = n => '$' + parseFloat(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+// ── watchlist ─────────────────────────────────────────────────────────────────
+let _watchlist = [];
+
+async function loadWatchlist() {
+  _watchlist = await fetch('/api/watchlist').then(r=>r.json());
+  renderWatchlist();
+}
+
+function renderWatchlist() {
+  const el = document.getElementById('watchlistItems');
+  const empty = document.getElementById('watchEmpty');
+  if (!_watchlist.length) { el.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display = 'none';
+  el.innerHTML = _watchlist.map(s => `
+    <div style="display:flex;justify-content:space-between;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.4rem .7rem;">
+      <span style="font-weight:700;font-size:.9rem;">${s}</span>
+      <button onclick="removeWatch('${s}')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;line-height:1;">×</button>
+    </div>`).join('');
+}
+
+async function addWatch() {
+  const input = document.getElementById('watchInput');
+  const sym = input.value.trim().toUpperCase();
+  if (!sym) return;
+  await fetch('/api/watchlist', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbol:sym})});
+  input.value = '';
+  await loadWatchlist();
+}
+
+async function quickAdd(sym) {
+  await fetch('/api/watchlist', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbol:sym})});
+  await loadWatchlist();
+}
+
+async function removeWatch(sym) {
+  await fetch(`/api/watchlist/${sym}`, {method:'DELETE'});
+  _watchlist = _watchlist.filter(s=>s!==sym);
+  renderWatchlist();
+}
+
+// ── calls feed ────────────────────────────────────────────────────────────────
+async function loadCalls() {
+  const calls = await fetch('/api/calls').then(r=>r.json());
+  renderCalls(calls);
+}
+
+function renderCalls(calls) {
+  const feed  = document.getElementById('callsFeed');
+  const empty = document.getElementById('callsEmpty');
+  if (!calls || !calls.length) { feed.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display = 'none';
+  feed.innerHTML = calls.map(c => {
+    const bull = c.direction === 'bullish';
+    const color = bull ? 'var(--accent)' : 'var(--red)';
+    const icon  = bull ? '▲' : '▼';
+    const conf  = c.confidence || 50;
+    const confColor = conf >= 75 ? 'var(--accent)' : conf >= 50 ? 'var(--gold)' : 'var(--muted)';
+    const statusBadge = c.status === 'active'
+      ? '<span style="background:rgba(126,200,80,.15);color:var(--accent);padding:.15rem .5rem;border-radius:99px;font-size:.7rem;font-weight:700;">ACTIVE</span>'
+      : `<span style="color:var(--muted);font-size:.75rem;">${c.status}</span>`;
+    return `<div class="card" style="padding:1.4rem 1.5rem;border-left:3px solid ${color};">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.75rem;">
+        <div style="display:flex;align-items:center;gap:.75rem;">
+          <span style="font-size:1.3rem;font-weight:800;color:${color};">${icon} ${c.symbol}</span>
+          <span style="color:${color};font-size:.8rem;font-weight:700;text-transform:uppercase;">${c.direction}</span>
+          ${statusBadge}
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:.72rem;color:var(--muted);">Confidence</div>
+          <div style="font-size:1rem;font-weight:800;color:${confColor};">${conf}%</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:.75rem;font-size:.82rem;">
+        <div style="background:var(--surface);border-radius:8px;padding:.5rem .75rem;">
+          <div style="color:var(--muted);font-size:.7rem;">Entry</div>
+          <div style="font-weight:700;">${c.entry_price ? fmt(c.entry_price) : '—'}</div>
+        </div>
+        <div style="background:var(--surface);border-radius:8px;padding:.5rem .75rem;">
+          <div style="color:var(--muted);font-size:.7rem;">Target</div>
+          <div style="font-weight:700;color:var(--accent);">${c.target_price ? fmt(c.target_price) : '—'}</div>
+        </div>
+        <div style="background:var(--surface);border-radius:8px;padding:.5rem .75rem;">
+          <div style="color:var(--muted);font-size:.7rem;">Stop Loss</div>
+          <div style="font-weight:700;color:var(--red);">${c.stop_loss ? fmt(c.stop_loss) : '—'}</div>
+        </div>
+      </div>
+
+      ${c.entry_price && c.target_price && c.stop_loss ? `
+      <div style="margin-bottom:.75rem;font-size:.78rem;">
+        <div style="color:var(--muted);margin-bottom:.3rem;">Risk/Reward</div>
+        <div style="background:var(--surface);border-radius:99px;height:6px;overflow:hidden;position:relative;">
+          <div style="position:absolute;left:0;top:0;height:100%;background:var(--red);width:${Math.min(100,Math.abs(c.entry_price-c.stop_loss)/Math.abs(c.target_price-c.entry_price)*50)}%;"></div>
+          <div style="position:absolute;left:50%;top:0;height:100%;background:var(--accent);width:50%;"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:.3rem;color:var(--muted);">
+          <span>Risk: ${fmt(Math.abs(c.entry_price - c.stop_loss))}</span>
+          <span>Reward: ${fmt(Math.abs(c.target_price - c.entry_price))}</span>
+          <span style="color:var(--gold);">R:R ${(Math.abs(c.target_price-c.entry_price)/Math.abs(c.entry_price-c.stop_loss)).toFixed(1)}x</span>
+        </div>
+      </div>` : ''}
+
+      <div style="font-size:.82rem;color:var(--text);opacity:.85;line-height:1.5;">${c.reasoning || ''}</div>
+
+      <div style="display:flex;gap:.6rem;margin-top:1rem;">
+        <button onclick="paperTradeCall('${c.symbol}','${bull?'buy':'sell'}',${c.entry_price||0})" class="btn btn-green" style="font-size:.8rem;padding:.35rem .8rem;">📈 Paper Trade</button>
+        <a href="/trade" class="btn btn-secondary" style="font-size:.8rem;padding:.35rem .8rem;">View Chart</a>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function generateCalls() {
+  if (!_watchlist.length) { alert('Add symbols to your watchlist first.'); return; }
+  const btn = document.getElementById('genBtn');
+  const loading = document.getElementById('callsLoading');
+  btn.disabled = true;
+  btn.textContent = '⏳ Fetching news & analyzing…';
+  loading.style.display = 'block';
+  document.getElementById('callsFeed').innerHTML = '';
+  document.getElementById('callsEmpty').style.display = 'none';
+  try {
+    const calls = await fetch('/api/calls/generate', {method:'POST'}).then(r=>r.json());
+    if (calls.error) { alert(calls.error); }
+    else {
+      renderCalls(calls);
+      // show "last generated" timestamp
+      const now = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+      document.getElementById('lastGenTime').textContent = now;
+      document.getElementById('lastGenLabel').style.display = 'block';
+      // flash the feed to signal freshness
+      const feed = document.getElementById('callsFeed');
+      feed.style.opacity = '0';
+      setTimeout(() => { feed.style.transition = 'opacity .4s'; feed.style.opacity = '1'; }, 50);
+    }
+  } catch(e) { alert('Generation failed. Check your API key.'); }
+  btn.disabled = false;
+  btn.textContent = '⚡ Generate Fresh Calls';
+  loading.style.display = 'none';
+}
+
+async function paperTradeCall(symbol, side, price) {
+  const qty = prompt(`How many shares of ${symbol} to ${side}?`, '10');
+  if (!qty || isNaN(qty)) return;
+  const res = await fetch('/api/trade', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({symbol, side, qty: parseFloat(qty)})
+  }).then(r=>r.json());
+  if (res.error) { alert('Trade failed: ' + res.error); return; }
+  alert(`✅ ${side.toUpperCase()} ${qty} ${symbol} @ ${fmt(res.price)} | Balance: ${fmt(res.new_balance)}`);
+}
+
+// init
+fetch('/api/me').then(r=>r.json()).then(d => document.getElementById('navUser').textContent = d.username);
+loadWatchlist();
+loadCalls();
+</script>
+  <script src="/static/js/theme.js"></script>
+</body>
+</html>

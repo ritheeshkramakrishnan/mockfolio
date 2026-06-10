@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Activity Log — MockFolio</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="/">Mock<span>Folio</span></a>
+  <div class="nav-links">
+    <span id="navUser" style="color:var(--muted);font-size:.9rem;"></span>
+    <a href="/logout" class="btn btn-secondary" style="padding:.4rem .9rem;font-size:.85rem;">Log Out</a>
+  </div>
+</nav>
+
+<div class="app-layout">
+  <aside class="sidebar">
+    <a href="/dashboard"><span class="icon">🏠</span> Dashboard</a>
+    <a href="/trade"><span class="icon">💹</span> Trade</a>
+    <a href="/options"><span class="icon">📊</span> Options</a>
+    <a href="/calls"><span class="icon">📡</span> Market Calls</a>
+    <a href="/signals"><span class="icon">🤖</span> AI Signals</a>
+    <a href="/activity" class="active"><span class="icon">📋</span> Activity Log</a>
+    <a href="/learn"><span class="icon">📚</span> AI Tutor</a>
+    <a href="/flashcards"><span class="icon">🃏</span> Flashcards</a>
+  </aside>
+
+  <main class="main-content">
+    <div class="section-head">
+      <div>
+        <h2>Activity Log</h2>
+        <p style="color:var(--muted);font-size:.9rem;">Every action — AI autopilot, manual trades, options — with balance impact</p>
+      </div>
+      <button onclick="loadAll()" class="btn btn-secondary" style="margin-top:.25rem;font-size:.85rem;">↻ Refresh</button>
+    </div>
+
+    <!-- Summary cards -->
+    <div id="summaryCards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem;">
+      <div class="card" style="padding:1rem 1.2rem;">
+        <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem;">Cash Balance</div>
+        <div id="sumCash" style="font-size:1.4rem;font-weight:800;">—</div>
+        <div style="font-size:.75rem;color:var(--muted);margin-top:.2rem;">Available to trade</div>
+      </div>
+      <div class="card" style="padding:1rem 1.2rem;">
+        <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem;">In Positions</div>
+        <div id="sumPositions" style="font-size:1.4rem;font-weight:800;">—</div>
+        <div id="sumPositionsList" style="font-size:.72rem;color:var(--muted);margin-top:.2rem;"></div>
+      </div>
+      <div class="card" style="padding:1rem 1.2rem;">
+        <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem;">Total Portfolio</div>
+        <div id="sumTotal" style="font-size:1.4rem;font-weight:800;">—</div>
+        <div id="sumChange" style="font-size:.75rem;margin-top:.2rem;"></div>
+      </div>
+      <div class="card" style="padding:1rem 1.2rem;">
+        <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem;">AI Deployed</div>
+        <div id="sumAI" style="font-size:1.4rem;font-weight:800;">—</div>
+        <div id="sumAIPnl" style="font-size:.75rem;margin-top:.2rem;"></div>
+      </div>
+    </div>
+
+    <!-- "Why did my balance drop?" explainer (shown when positions exist) -->
+    <div id="balanceExplainer" class="card" style="padding:1rem 1.4rem;margin-bottom:1.5rem;border-left:3px solid var(--gold);display:none;">
+      <div style="display:flex;align-items:flex-start;gap:.75rem;">
+        <span style="font-size:1.3rem;">💡</span>
+        <div>
+          <div style="font-weight:700;margin-bottom:.3rem;">Why is your cash balance lower?</div>
+          <div id="explainerText" style="font-size:.85rem;color:var(--muted);line-height:1.6;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter tabs -->
+    <div style="display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap;">
+      <button id="tab-all"       onclick="setFilter('all')"       class="btn btn-green"      style="font-size:.8rem;padding:.35rem .8rem;">All</button>
+      <button id="tab-autopilot" onclick="setFilter('autopilot')" class="btn btn-secondary"  style="font-size:.8rem;padding:.35rem .8rem;">🤖 Autopilot</button>
+      <button id="tab-manual"    onclick="setFilter('manual')"    class="btn btn-secondary"  style="font-size:.8rem;padding:.35rem .8rem;">👤 Manual</button>
+      <button id="tab-options"   onclick="setFilter('options')"   class="btn btn-secondary"  style="font-size:.8rem;padding:.35rem .8rem;">📊 Options</button>
+      <button id="tab-ai_decision" onclick="setFilter('ai_decision')" class="btn btn-secondary" style="font-size:.8rem;padding:.35rem .8rem;">🧠 AI Decisions</button>
+    </div>
+
+    <!-- Loading -->
+    <div id="activityLoading" class="card" style="padding:2rem;text-align:center;color:var(--muted);">
+      <div style="font-size:1.5rem;margin-bottom:.5rem;">⏳</div>
+      <div>Loading activity…</div>
+    </div>
+
+    <!-- Empty state -->
+    <div id="activityEmpty" class="card" style="padding:2rem;text-align:center;color:var(--muted);display:none;">
+      <div style="font-size:2rem;margin-bottom:.75rem;">📋</div>
+      <div style="font-weight:600;margin-bottom:.4rem;">No activity yet</div>
+      <div style="font-size:.85rem;">Make a trade or run Autopilot to see logs here</div>
+    </div>
+
+    <!-- Activity feed -->
+    <div id="activityFeed" style="display:flex;flex-direction:column;gap:.6rem;"></div>
+  </main>
+</div>
+
+<script>
+const fmt  = n  => '$' + parseFloat(n).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+const fmtN = n  => (n >= 0 ? '+' : '') + fmt(n);
+const fmtT = ts => {
+  if (!ts) return '—';
+  let s = ts.toString().trim().replace(/[+-]\d{2}:\d{2}$/, '').replace(/[+-]\d{2}$/, '').replace(' ', 'T');
+  if (!s.endsWith('Z')) s += 'Z';
+  const d = new Date(s);
+  if (isNaN(d)) return ts;
+  const diff = Math.floor((Date.now() - d) / 1000);
+  if (diff < 60)   return diff + 's ago';
+  if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+  return Math.floor(diff/86400) + 'd ago';
+};
+const fmtDate = ts => {
+  if (!ts) return '—';
+  let s = ts.toString().trim().replace(/[+-]\d{2}:\d{2}$/, '').replace(/[+-]\d{2}$/, '').replace(' ', 'T');
+  if (!s.endsWith('Z')) s += 'Z';
+  const d = new Date(s);
+  if (isNaN(d)) return ts;
+  return d.toLocaleString();
+};
+
+let _allEvents = [];
+let _currentFilter = 'all';
+
+function setFilter(f) {
+  _currentFilter = f;
+  document.querySelectorAll('[id^="tab-"]').forEach(b => {
+    b.className = 'btn btn-secondary';
+    b.style.fontSize = '.8rem';
+    b.style.padding = '.35rem .8rem';
+  });
+  const active = document.getElementById('tab-' + f);
+  if (active) {
+    active.className = 'btn btn-green';
+    active.style.fontSize = '.8rem';
+    active.style.padding = '.35rem .8rem';
+  }
+  renderFeed();
+}
+
+function renderFeed() {
+  const feed  = document.getElementById('activityFeed');
+  const empty = document.getElementById('activityEmpty');
+  const loading = document.getElementById('activityLoading');
+  loading.style.display = 'none';
+
+  let events = _allEvents;
+  if (_currentFilter === 'autopilot')   events = events.filter(e => e.source === 'autopilot' && e.type === 'trade');
+  if (_currentFilter === 'manual')      events = events.filter(e => e.source === 'manual');
+  if (_currentFilter === 'options')     events = events.filter(e => e.type === 'options_trade');
+  if (_currentFilter === 'ai_decision') events = events.filter(e => e.type === 'ai_decision');
+
+  if (!events.length) {
+    feed.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  feed.innerHTML = events.map(e => renderEvent(e)).join('');
+}
+
+function sourceBadge(e) {
+  if (e.source === 'autopilot') return '<span style="background:rgba(126,200,80,.15);color:var(--accent);padding:.15rem .55rem;border-radius:99px;font-size:.68rem;font-weight:700;letter-spacing:.04em;">🤖 AUTOPILOT</span>';
+  if (e.type === 'options_trade') return '<span style="background:rgba(138,95,210,.15);color:#a78bfa;padding:.15rem .55rem;border-radius:99px;font-size:.68rem;font-weight:700;letter-spacing:.04em;">📊 OPTIONS</span>';
+  if (e.type === 'ai_decision') return '<span style="background:rgba(126,200,80,.15);color:var(--accent);padding:.15rem .55rem;border-radius:99px;font-size:.68rem;font-weight:700;letter-spacing:.04em;">🧠 AI DECISION</span>';
+  return '<span style="background:rgba(255,255,255,.08);color:var(--muted);padding:.15rem .55rem;border-radius:99px;font-size:.68rem;font-weight:700;letter-spacing:.04em;">👤 MANUAL</span>';
+}
+
+function renderEvent(e) {
+  const impactColor = e.balance_impact < 0 ? 'var(--red)' : (e.balance_impact > 0 ? 'var(--accent)' : 'var(--muted)');
+  const borderColor = e.source === 'autopilot' ? 'var(--accent)' : (e.type === 'options_trade' ? '#a78bfa' : (e.balance_impact < 0 ? 'var(--red)' : 'var(--border)'));
+  const impactStr = e.balance_impact === 0 ? 'No balance change' : (e.balance_impact < 0 ? fmt(e.balance_impact) : '+' + fmt(e.balance_impact));
+
+  let actionLine = '';
+  if (e.type === 'trade') {
+    const sideIcon  = e.side === 'buy' ? '📈' : '📉';
+    const sideColor = e.side === 'buy' ? 'var(--red)' : 'var(--accent)';
+    actionLine = `<span style="color:${sideColor};font-weight:800;font-size:.95rem;">${sideIcon} ${e.side.toUpperCase()}</span>
+      <span style="font-weight:700;font-size:.95rem;margin-left:.4rem;">${e.qty} ${e.symbol}</span>
+      <span style="color:var(--muted);font-size:.85rem;margin-left:.3rem;">@ ${fmt(e.price)}</span>`;
+    if (e.side === 'sell' && e.pnl !== 0 && e.pnl !== null) {
+      const pnlColor = e.pnl >= 0 ? 'var(--accent)' : 'var(--red)';
+      actionLine += `<span style="color:${pnlColor};font-size:.82rem;font-weight:700;margin-left:.6rem;">P&L: ${e.pnl >= 0 ? '+' : ''}${fmt(e.pnl)}</span>`;
+    }
+  } else if (e.type === 'options_trade') {
+    const sideIcon  = e.side === 'buy' ? '📈' : '📉';
+    const sideColor = e.side === 'buy' ? 'var(--red)' : 'var(--accent)';
+    const optLabel  = `${e.option_type ? e.option_type.toUpperCase() : ''} $${e.strike} exp ${e.expiry || ''}`;
+    actionLine = `<span style="color:${sideColor};font-weight:800;font-size:.95rem;">${sideIcon} ${e.side.toUpperCase()}</span>
+      <span style="font-weight:700;font-size:.95rem;margin-left:.4rem;">${e.qty}x ${e.symbol} ${optLabel}</span>
+      <span style="color:var(--muted);font-size:.85rem;margin-left:.3rem;">@ ${fmt(e.price)} premium</span>`;
+    if (e.side === 'sell' && e.pnl !== 0 && e.pnl !== null) {
+      const pnlColor = e.pnl >= 0 ? 'var(--accent)' : 'var(--red)';
+      actionLine += `<span style="color:${pnlColor};font-size:.82rem;font-weight:700;margin-left:.6rem;">P&L: ${e.pnl >= 0 ? '+' : ''}${fmt(e.pnl)}</span>`;
+    }
+  } else if (e.type === 'ai_decision') {
+    const act = (e.action || '').toUpperCase();
+    const actColor = act === 'HOLD' ? 'var(--gold)' : 'var(--muted)';
+    const sym = e.symbol ? ` — ${e.symbol}` : '';
+    actionLine = `<span style="color:${actColor};font-weight:800;font-size:.95rem;">⏸ ${act}${sym}</span>`;
+  }
+
+  const reasoningHtml = e.reasoning
+    ? `<div style="margin-top:.65rem;padding:.6rem .8rem;background:var(--surface);border-radius:8px;border-left:2px solid var(--border);">
+         <div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.3rem;">AI Reasoning</div>
+         <div style="font-size:.82rem;color:var(--text);line-height:1.55;">${e.reasoning}</div>
+       </div>`
+    : '';
+
+  return `<div class="card" style="padding:1rem 1.25rem;border-left:3px solid ${borderColor};">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:.5rem;">
+      <div style="display:flex;align-items:center;flex-wrap:wrap;gap:.5rem;">
+        ${sourceBadge(e)}
+        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:.4rem;">${actionLine}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:1rem;flex-shrink:0;">
+        <div style="text-align:right;">
+          <div style="font-size:.72rem;color:var(--muted);">Balance Impact</div>
+          <div style="font-weight:800;color:${impactColor};font-size:.95rem;">${impactStr}</div>
+        </div>
+        <div style="text-align:right;min-width:60px;">
+          <div style="font-size:.72rem;color:var(--muted);">${fmtT(e.executed_at)}</div>
+          <div style="font-size:.65rem;color:var(--muted);opacity:.65;">${fmtDate(e.executed_at).split(',')[0]}</div>
+        </div>
+      </div>
+    </div>
+    ${reasoningHtml}
+  </div>`;
+}
+
+async function loadSummary() {
+  const s = await fetch('/api/activity/summary').then(r => r.json());
+
+  document.getElementById('sumCash').textContent = fmt(s.cash_balance);
+  document.getElementById('sumCash').style.color = 'var(--text)';
+
+  document.getElementById('sumPositions').textContent = fmt(s.positions_value);
+  if (s.positions.length) {
+    document.getElementById('sumPositionsList').textContent =
+      s.positions.map(p => `${p.symbol}: ${p.qty} shares`).join(' · ');
+  } else {
+    document.getElementById('sumPositionsList').textContent = 'No open positions';
+  }
+
+  document.getElementById('sumTotal').textContent = fmt(s.total_portfolio);
+  const change = s.total_portfolio - s.starting_balance;
+  const changePct = (change / s.starting_balance * 100).toFixed(2);
+  const chEl = document.getElementById('sumChange');
+  chEl.textContent = (change >= 0 ? '+' : '') + fmt(change) + ' (' + (change >= 0 ? '+' : '') + changePct + '%)';
+  chEl.style.color = change >= 0 ? 'var(--accent)' : 'var(--red)';
+
+  document.getElementById('sumAI').textContent = fmt(s.ai_total_deployed);
+  const aiPnlEl = document.getElementById('sumAIPnl');
+  aiPnlEl.textContent = `Realized P&L: ${s.ai_realized_pnl >= 0 ? '+' : ''}${fmt(s.ai_realized_pnl)} · ${s.ai_trade_count} trades`;
+  aiPnlEl.style.color = s.ai_realized_pnl >= 0 ? 'var(--accent)' : 'var(--red)';
+
+  // Balance explainer
+  if (s.positions_value > 0) {
+    const expl = document.getElementById('balanceExplainer');
+    expl.style.display = 'block';
+    const posList = s.positions.map(p => `<b>${p.symbol}</b> (${p.qty} shares = ${fmt(p.value)})`).join(', ');
+    document.getElementById('explainerText').innerHTML =
+      `Your cash dropped from <b>${fmt(s.starting_balance)}</b> to <b>${fmt(s.cash_balance)}</b> because <b>${fmt(s.positions_value)}</b> is currently tied up in open positions: ${posList}.<br>
+       Your total portfolio value is <b>${fmt(s.total_portfolio)}</b>. Cash goes back up when you close positions.`;
+  }
+}
+
+async function loadActivity() {
+  _allEvents = await fetch('/api/activity').then(r => r.json());
+  renderFeed();
+}
+
+async function loadAll() {
+  await Promise.all([loadSummary(), loadActivity()]);
+}
+
+fetch('/api/me').then(r => r.json()).then(d => document.getElementById('navUser').textContent = d.username);
+loadAll();
+</script>
+  <script src="/static/js/theme.js"></script>
+</body>
+</html>

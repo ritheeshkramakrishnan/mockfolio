@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Quant Lab — MockFolio</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .tab-list{display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:1.5rem;border-bottom:1px solid var(--border);padding-bottom:.75rem;}
+    .tab-btn{padding:.45rem 1rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-size:.83rem;font-weight:600;transition:all .15s;}
+    .tab-btn.active{background:rgba(34,197,94,.12);border-color:var(--accent);color:var(--accent);}
+    .tab-pane{display:none;}.tab-pane.active{display:block;}
+    .qm-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.5rem;margin-bottom:1.25rem;}
+    .qm-def{font-size:.95rem;color:var(--text);line-height:1.7;margin-bottom:1rem;}
+    .qm-term{font-size:1.15rem;font-weight:800;color:var(--accent);margin-bottom:.4rem;}
+    .qm-formula{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-family:monospace;font-size:.88rem;color:var(--cream2);margin:.75rem 0;}
+    .qm-why{font-size:.83rem;color:var(--muted);line-height:1.6;border-left:3px solid var(--accent);padding-left:.75rem;}
+    .calc-row{display:flex;gap:.75rem;align-items:flex-end;flex-wrap:wrap;margin:.75rem 0;}
+    .calc-field{display:flex;flex-direction:column;gap:.25rem;min-width:110px;}
+    .calc-field label{font-size:.75rem;color:var(--muted);}
+    .calc-result{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.25);border-radius:10px;padding:.75rem 1rem;font-size:.95rem;font-weight:700;color:var(--green);margin-top:.75rem;}
+    .ai-chat{display:flex;flex-direction:column;height:420px;}
+    .ai-msgs{flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:.75rem;}
+    .msg-user{align-self:flex-end;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.2);border-radius:12px 12px 2px 12px;padding:.6rem 1rem;max-width:80%;font-size:.88rem;}
+    .msg-bot{align-self:flex-start;background:var(--surface);border:1px solid var(--border);border-radius:12px 12px 12px 2px;padding:.6rem 1rem;max-width:85%;font-size:.88rem;line-height:1.6;}
+    .ai-input-row{display:flex;gap:.5rem;padding:.75rem 0 0;}
+    .section-tag{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.25rem;}
+  </style>
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="/">Mock<span>Folio</span></a>
+  <div class="nav-links">
+    <span id="navBalance" style="color:var(--accent);font-weight:700;font-size:.9rem;"></span>
+    <a href="/logout" class="btn btn-secondary" style="padding:.4rem .9rem;font-size:.85rem;">Log Out</a>
+  </div>
+</nav>
+<div class="app-layout">
+  <aside class="sidebar">
+    <a href="/dashboard"><span class="icon">🏠</span> Dashboard</a>
+    <a href="/trade"><span class="icon">💹</span> Trade</a>
+    <a href="/options"><span class="icon">📊</span> Options</a>
+    <a href="/calls"><span class="icon">📡</span> Market Calls</a>
+    <a href="/signals"><span class="icon">🤖</span> AI Signals</a>
+    <a href="/activity"><span class="icon">📋</span> Activity Log</a>
+    <a href="/learn" class="active"><span class="icon">📚</span> AI Tutor</a>
+    <a href="/flashcards"><span class="icon">🃏</span> Flashcards</a>
+  </aside>
+  <main class="main-content">
+    <div class="section-head">
+      <h2>Quant Methods Lab</h2>
+      <p style="color:var(--muted);font-size:.9rem;">Every major quantitative trading concept · Interactive calculators · QuantBot AI</p>
+    </div>
+
+    <div class="tab-list">
+      <button class="tab-btn active" onclick="switchTab('bot')">🤖 QuantBot AI</button>
+      <button class="tab-btn" onclick="switchTab('mc')">🎲 Monte Carlo</button>
+      <button class="tab-btn" onclick="switchTab('risk')">📊 Risk &amp; Performance</button>
+      <button class="tab-btn" onclick="switchTab('sizing')">💰 Position Sizing</button>
+      <button class="tab-btn" onclick="switchTab('theory')">📈 Market Theory</button>
+      <button class="tab-btn" onclick="switchTab('options')">📉 Options &amp; Greeks</button>
+      <button class="tab-btn" onclick="switchTab('portfolio')">🗂 Portfolio Theory</button>
+      <button class="tab-btn" onclick="switchTab('technical')">📐 Technical Methods</button>
+      <button class="tab-btn" onclick="switchTab('patterns')">🏔️ Chart Patterns</button>
+    </div>
+
+    <!-- ── QuantBot AI ── -->
+    <div id="tab-bot" class="tab-pane active">
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.5rem;">
+          <span style="font-size:1.2rem;">🤖</span>
+          <div><b style="color:var(--cream);">QuantBot</b><span style="font-size:.78rem;color:var(--muted);margin-left:.5rem;">Ask anything about trading, quant methods, or strategies</span></div>
+        </div>
+        <div class="ai-chat">
+          <div class="ai-msgs" id="aiMessages">
+            <div class="msg-bot">👋 Hi! I'm QuantBot, your AI trading tutor. Ask me about any concept — RSI, Monte Carlo, Sharpe ratio, mean reversion, options Greeks, portfolio theory, or any strategy. What do you want to learn?</div>
+          </div>
+          <div style="padding:0 1rem 1rem;">
+            <div class="ai-input-row">
+              <input class="input" id="aiInput" placeholder="e.g. Explain the Kelly Criterion with an example" style="flex:1;" onkeydown="if(event.key==='Enter')sendAI()"/>
+              <button class="btn btn-primary" onclick="sendAI()">Ask →</button>
+            </div>
+            <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.6rem;">
+              <button class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .6rem;" onclick="askQuick('What is mean reversion?')">Mean Reversion</button>
+              <button class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .6rem;" onclick="askQuick('Explain options Greeks')">Options Greeks</button>
+              <button class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .6rem;" onclick="askQuick('How does pairs trading work?')">Pairs Trading</button>
+              <button class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .6rem;" onclick="askQuick('What is the Sortino ratio?')">Sortino Ratio</button>
+              <button class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .6rem;" onclick="askQuick('Explain MACD and how to use it for signals')">MACD</button>
+              <button class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .6rem;" onclick="askQuick('What is cointegration in pairs trading?')">Cointegration</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Monte Carlo ── -->
+    <div id="tab-mc" class="tab-pane">
+      <div class="qm-card">
+        <div class="section-tag">Concept First</div>
+        <div class="qm-def">Imagine you want to know where a stock price might be in one year. You can't know for sure — but you can simulate thousands of possible futures based on how volatile the stock has been historically. Each simulated path uses a random daily return drawn from a normal distribution matching the stock's past behavior. Run 500 paths and you get a probability distribution of outcomes.</div>
+        <div class="qm-term">Monte Carlo Simulation</div>
+        <div class="qm-formula">P(t+1) = P(t) × (1 + N(μ, σ))
+where μ = historical mean daily return, σ = historical daily std dev
+Run N simulations, collect final prices → build probability distribution</div>
+        <div class="qm-why">Used to estimate Value at Risk, stress-test portfolios, price options, and understand the range of possible outcomes before entering a trade.</div>
+      </div>
+      <div class="card" style="padding:1.5rem;">
+        <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem;">Run Monte Carlo Simulator</h3>
+        <div class="calc-row">
+          <div class="calc-field"><label>Symbol</label><input class="input" id="mcSymbol" value="SPY" style="width:90px;"/></div>
+          <div class="calc-field"><label>Days Forward</label><input class="input" type="number" id="mcDays" value="252" style="width:90px;"/></div>
+          <div class="calc-field"><label>Simulations</label><input class="input" type="number" id="mcSims" value="500" style="width:90px;"/></div>
+          <button class="btn btn-primary" onclick="runMC()" style="align-self:flex-end;">Run →</button>
+        </div>
+        <div id="mcResult" style="display:none;">
+          <div style="position:relative;height:280px;margin:1rem 0;"><canvas id="mcChart"></canvas></div>
+          <div id="mcStats" class="calc-result"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Risk & Performance ── -->
+    <div id="tab-risk" class="tab-pane">
+
+      <div class="qm-card">
+        <div class="section-tag">Concept First</div>
+        <div class="qm-def">A strategy that earns 30% a year sounds great — until you learn it required a 50% drawdown to get there. Risk-adjusted return metrics let you compare strategies fairly by normalizing returns against the risk taken to achieve them.</div>
+        <div class="qm-term">Sharpe Ratio</div>
+        <div class="qm-formula">Sharpe = (Rp − Rf) / σp
+Rp = portfolio return, Rf = risk-free rate (e.g. 5%), σp = std dev of returns
+Annualize: multiply mean daily return × 252, std × √252</div>
+        <div class="qm-why">A Sharpe above 1.0 is acceptable. Above 2.0 is strong. Below 0 means you'd do better in T-bills.</div>
+        <div class="calc-row">
+          <div class="calc-field"><label>Portfolio Return %</label><input class="input" type="number" id="shrRp" value="18" style="width:100px;"/></div>
+          <div class="calc-field"><label>Risk-Free Rate %</label><input class="input" type="number" id="shrRf" value="5" style="width:100px;"/></div>
+          <div class="calc-field"><label>Annual Std Dev %</label><input class="input" type="number" id="shrSig" value="12" style="width:100px;"/></div>
+          <button class="btn btn-primary" onclick="calcSharpe()" style="align-self:flex-end;">Calculate</button>
+        </div>
+        <div id="sharpeResult" class="calc-result" style="display:none;"></div>
+      </div>
+
+      <div class="qm-card">
+        <div class="section-tag">Concept First</div>
+        <div class="qm-def">Sharpe ratio penalizes both upside and downside volatility equally. But investors only care about downside risk. Sortino fixes this by only using the standard deviation of negative returns (downside deviation) in the denominator.</div>
+        <div class="qm-term">Sortino Ratio</div>
+        <div class="qm-formula">Sortino = (Rp − Rf) / σ_downside
+σ_downside = std dev of returns BELOW the target/threshold (usually 0 or Rf)
+Higher is better — a Sortino of 2+ is strong.</div>
+        <div class="qm-why">Preferred by many hedge funds. A strategy can have a low Sharpe but high Sortino if its volatility is mostly upside — that's a good thing.</div>
+        <div class="calc-row">
+          <div class="calc-field"><label>Return %</label><input class="input" type="number" id="sorRp" value="20" style="width:100px;"/></div>
+          <div class="calc-field"><label>Risk-Free %</label><input class="input" type="number" id="sorRf" value="5" style="width:100px;"/></div>
+          <div class="calc-field"><label>Downside Dev %</label><input class="input" type="number" id="sorDd" value="8" style="width:100px;"/></div>
+          <button class="btn btn-primary" onclick="calcSortino()" style="align-self:flex-end;">Calculate</button>
+        </div>
+        <div id="sortinoResult" class="calc-result" style="display:none;"></div>
+      </div>
+
+      <div class="qm-card">
+        <div class="section-tag">Concept First</div>
+        <div class="qm-def">Before you can risk losing money, you need to know the most you could lose. Maximum Drawdown measures the peak-to-trough decline of a portfolio. If your $100k account drops to $65k before recovering, the max drawdown is 35%.</div>
+        <div class="qm-term">Maximum Drawdown (MDD)</div>
+        <div class="qm-formula">MDD = (Trough Value − Peak Value) / Peak Value × 100
+Calmar Ratio = Annualized Return / |Max Drawdown|
+A Calmar above 1.0 means you earn more than you risk losing in a year.</div>
+        <div class="qm-why">Funded trader firms (TopStep, FTMO) use max drawdown as the primary evaluation metric. Breaching it fails your account.</div>
+        <div class="calc-row">
+          <div class="calc-field"><label>Peak Value $</label><input class="input" type="number" id="mddPeak" value="100000" style="width:110px;"/></div>
+          <div class="calc-field"><label>Trough Value $</label><input class="input" type="number" id="mddTrough" value="72000" style="width:110px;"/></div>
+          <div class="calc-field"><label>Annual Return %</label><input class="input" type="number" id="mddRet" value="25" style="width:110px;"/></div>
+          <button class="btn btn-primary" onclick="calcMDD()" style="align-self:flex-end;">Calculate</button>
+        </div>
+        <div id="mddResult" class="calc-result" style="display:none;"></div>
+      </div>
+
+      <div class="qm-card">
+        <div class="section-tag">Concept First</div>
+        <div class="qm-def">If I told you there's a 95% chance you won't lose more than $2,000 tomorrow, that's VaR. It doesn't tell you how bad things get in the worst 5% — that's CVaR/Expected Shortfall — but it gives a practical daily risk budget.</div>
+        <div class="qm-term">Value at Risk (VaR)</div>
+        <div class="qm-formula">Parametric VaR = Portfolio × σ × Z
+Z-scores: 90% = 1.282 | 95% = 1.645 | 99% = 2.326
+Example: $50k × 1.5% daily σ × 1.645 = $1,234 daily 95% VaR</div>
+        <div class="qm-why">Banks and prop firms use VaR to set position limits. If your daily VaR exceeds a threshold, risk management forces you to reduce exposure.</div>
+        <div class="calc-row">
+          <div class="calc-field"><label>Portfolio $</label><input class="input" type="number" id="varPort" value="50000" style="width:110px;"/></div>
+          <div class="calc-field"><label>Daily Std Dev %</label><input class="input" type="number" id="varSig" value="1.5" step="0.1" style="width:110px;"/></div>
+          <div class="calc-field"><label>Confidence %</label>
+            <select class="input" id="varConf" style="width:100px;">
+              <option value="1.282">90%</option>
+              <option value="1.645" selected>95%</option>
+              <option value="2.326">99%</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="calcVaR()" style="align-self:flex-end;">Calculate</button>
+        </div>
+        <div id="varResult" class="calc-result" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- ── Position Sizing ── -->
+    <div id="tab-sizing" class="tab-pane">
+
+      <div class="qm-card">
+        <div class="section-tag">Concept First</div>
+        <div class="qm-def">Imagine you flip a coin that pays $2 on heads, loses $1 on tails. You have a 50% win rate. How much of your bankroll should you bet each flip to grow fastest without risking ruin? Kelly answers this exactly. Too much and variance destroys you; too little leaves money on the table.</div>
+        <div class="qm-term">Kelly Criterion</div>
+        <div class="qm-formula">f* = (b × p − q) / b
+b = net odds (win/loss ratio), p = win probability, q = 1 − p
+Simplified for trading: f* = (Win Rate × Avg Win − Loss Rate × Avg Loss) / Avg Win
+Most practitioners use Half-Kelly (f*/2) to reduce variance</div>
+        <div class="qm-why">Maximizes long-run geometric growth rate. Critical for position sizing — tells you exactly what fraction of capital to risk per trade.</div>
+        <div class="calc-row">
+          <div class="calc-field"><label>Win Rate %</label><input class="input" type="number" id="kellyWin" value="55" style="width:100px;"/></div>
+          <div class="calc-field"><label>Avg Win $</label><input class="input" type="number" id="kellyAW" value="200" style="width:100px;"/></div>
+          <div class="calc-field"><label>Avg Loss $</label><input class="input" type="number" id="kellyAL" value="100" style="width:100px;"/></div>
+          <div class="calc-field"><label>Capital $</label><input class="input" type="number" id="kellyCapital" value="50000" style="width:110px;"/></div>
+          <button class="btn btn-primary" onclick="calcKelly()" style="align-self:flex-end;">Calculate</button>
+        </div>
+        <div id="kellyResult" class="calc-result" style="display:none;"></div>
+      </div>
+
+      <div class="qm-card">
+        <div class="section-tag">Concept First</div>
+        <div class="qm-def">Fixed fractional position sizing says: risk the same percentage of your account on every trade regardless of setup quality. If you risk 1% per trade on a $50k account, you risk $500 per trade. Your position size then depends on where you put your stop-loss.</div>
+        <div class="qm-term">Fixed Fractional Position Sizing</div>
+        <div class="qm-formula">Risk per trade = Account × Risk %
+Shares = Risk per trade / (Entry Price − Stop Loss Price)
+Example: $50k × 1% = $500 risk. Entry $100, Stop $95 → $500/$5 = 100 shares</div>
+        <div class="qm-why">The most widely used position sizing method. Scales naturally as your account grows or shrinks — a losing streak automatically reduces size.</div>
+        <div class="calc-row">
+          <div class="calc-field"><label>Account $</label><input class="input" type="number" id="ffAcct" value="50000" style="width:110px;"/></div>
+          <div class="calc-field"><label>Risk % per Trade</label><input class="input" type="number" id="ffRisk" value="1" step="0.1" style="width:110px;"/></div>
+          <div class="calc-field"><label>Entry Price $</label><input class="input" type="number" id="ffEntry" value="100" style="width:100px;"/></div>
+          <div class="calc-field"><label>Stop Loss $</label><input class="input" type="number" id="ffStop" value="95" style="width:100px;"/></div>
+          <button class="btn btn-primary" onclick="calcFF()" style="align-self:flex-end;">Calculate</button>
+        </div>
+        <div id="ffResult" class="calc-result" style="display:none;"></div>
+      </div>
+
+      <div class="qm-card">
+        <div class="section-tag">Concept First</div>
+        <div class="qm-def">A reward:risk ratio tells you how much you stand to gain relative to how much you risk. If you risk $100 to make $300, your R:R is 3:1. Even with a 40% win rate, a 3:1 R:R strategy is profitable in the long run.</div>
+        <div class="qm-term">Expected Value &amp; R:R Ratio</div>
+        <div class="qm-formula">EV = (Win Rate × Avg Win) − (Loss Rate × Avg Loss)
+Minimum win rate for breakeven = 1 / (1 + R:R)
+At 2:1 R:R → need only 33.3% win rate to break even</div>
+        <div class="qm-why">Many professional traders focus entirely on R:R ratios. A 30% win rate with 5:1 R:R is more profitable than 60% win rate with 1:1.</div>
+        <div class="calc-row">
+          <div class="calc-field"><label>Win Rate %</label><input class="input" type="number" id="evWin" value="45" style="width:100px;"/></div>
+          <div class="calc-field"><label>Avg Win $</label><input class="input" type="number" id="evAW" value="300" style="width:100px;"/></div>
+          <div class="calc-field"><label>Avg Loss $</label><input class="input" type="number" id="evAL" value="100" style="width:100px;"/></div>
+          <button class="btn btn-primary" onclick="calcEV()" style="align-self:flex-end;">Calculate</button>
+        </div>
+        <div id="evResult" class="calc-result" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- ── Market Theory ── -->
+    <div id="tab-theory" class="tab-pane">
+
+      <div class="qm-card">
+        <div class="section-tag">Concept First</div>
+        <div class="qm-def">Prices don't drift randomly forever — they tend to pull back toward an average over time. A rubber band stretches but snaps back. When a stock's price deviates significantly from its historical mean (measured by Z-score), you bet on it returning. This is the foundation of statistical arbitrage.</div>
+        <div class="qm-term">Mean Reversion</div>
+        <div class="qm-formula">Z-score = (Current Price − Moving Average) / Std Dev of Price
+Entry signal: |Z| > 2.0 (price is 2 standard deviations from mean)
+Exit signal: Z approaches 0 (price returns to mean)</div>
+        <div class="qm-why">Most effective in range-bound markets. Fails when a trend breaks structure. Works well with pairs of correlated assets (pairs trading).</div>
+        <div class="calc-row">
+          <div class="calc-field"><label>Current Price</label><input class="input" type="number" id="mrPrice" value="115" style="width:100px;"/></div>
+          <div class="calc-field"><label>Moving Average</label><input class="input" type="number" id="mrMA" value="100" style="width:100px;"/></div>
+          <div class="calc-field"><label>Std Dev</label><input class="input" type="number" id="mrSD" value="8" style="width:100px;"/></div>
+          <button class="btn btn-primary" onclick="calcZScore()" style="align-self:flex-end;">Z-Score</button>
+        </div>
+        <div id="zscoreResult" class="calc-result" style="display:none;"></div>
+      </div>
+
+      <div class="qm-card">
+        <div class="section-tag">Concept First</div>
+        <div class="qm-def">Stocks that have outperformed recently tend to keep outperforming over the next 3–12 months. This is momentum. The opposite of mean reversion. It works because institutional investors move slowly — they can't buy their full position at once, so a stock rises gradually as they accumulate.</div>
+        <div class="qm-term">Momentum / Trend Following</div>
+        <div class="qm-formula">Rate of Change (ROC) = (P_now − P_n_periods_ago) / P_n_periods_ago × 100
+Cross-sectional momentum: rank all assets by 12-1 month return, buy top decile
+Time-series momentum: buy if 12-month return > 0, sell if < 0</div>
+        <div class="qm-why">One of the most robust anomalies in finance, documented across stocks, bonds, commodities, and currencies. Works in trending markets; whipsaws in choppy ones.</div>
+      </div>
+
+      <div class="qm-card">
+        <div class="section-tag">Concept First</div>
+        <div class="qm-def">Beta measures how much a stock moves relative to the market. A beta of 1.5 means the stock moves 1.5% for every 1% market move. Alpha is the return above what beta predicts — it's the "skill" portion. CAPM (Capital Asset Pricing Model) formalizes the relationship between risk and expected return.</div>
+        <div class="qm-term">Alpha, Beta &amp; CAPM</div>
+        <div class="qm-formula">Expected Return = Rf + β × (Rm − Rf)
+Alpha = Actual Return − Expected Return (CAPM)
+Beta = Cov(stock, market) / Var(market)
+Positive alpha = outperforming on a risk-adjusted basis</div>
+        <div class="qm-why">Every fund manager is judged on alpha. Beta is "free" risk from market exposure — you want to be paid for beta, but alpha is what separates skill from luck.</div>
+        <div class="calc-row">
+          <div class="calc-field"><label>Beta</label><input class="input" type="number" id="capmBeta" value="1.3" step="0.1" style="width:90px;"/></div>
+          <div class="calc-field"><label>Risk-Free %</label><input class="input" type="number" id="capmRf" value="5" style="width:90px;"/></div>
+          <div class="calc-field"><label>Market Return %</label><input class="input" type="number" id="capmRm" value="12" style="width:90px;"/></div>
+          <div class="calc-field"><label>Actual Return %</label><input class="input" type="number" id="capmActual" value="16" style="width:100px;"/></div>
+          <button class="btn btn-primary" onclick="calcCAPM()" style="align-self:flex-end;">Calculate</button>
+        </div>
+        <div id="capmResult" class="calc-result" style="display:none;"></div>
+      </div>
+
+      <div class="qm-card">
+        <div class="section-tag">Concept First</div>
+        <div class="qm-def">Two stocks that move together aren't just correlated — they're cointegrated if their prices are linked by a long-run equilibrium. Even if they drift apart short term, they always come back together. Pairs trading exploits this: short the outperformer, long the underperformer, wait for convergence.</div>
+        <div class="qm-term">Pairs Trading &amp; Cointegration</div>
+        <div class="qm-formula">Spread = Price_A − hedge_ratio × Price_B
+hedge_ratio = from OLS regression of A on B
+Entry: spread Z-score > 2 → short spread (sell A, buy B)
+Exit: Z-score returns to 0</div>
+        <div class="qm-why">Market-neutral strategy — profit doesn't depend on market direction. Commonly used with ETF pairs (SPY/QQQ), sector peers (AAPL/MSFT), or commodity futures.</div>
+      </div>
+    </div>
+
+    <!-- ── Options & Greeks ── -->
+    <div id="tab-options" class="tab-pane">
+
+      <div class="qm-card">
+        <div class="section-tag">Concept First</div>
+        <div class="qm-def">An option gives you the right, not the obligation, to buy (call) or sell (put) an asset at a set price (strike) before expiry. The price of that option depends on five things: stock price, strike, time to expiry, volatility, and interest rates. Black-Scholes gives the exact formula.</div>
+        <div class="qm-term">Black-Scholes Option Pricing</div>
+        <div class="qm-formula">C = S × N(d1) − K × e^(−rT) × N(d2)
+d1 = [ln(S/K) + (r + σ²/2)T] / (σ√T)
+d2 = d1 − σ√T
+S=stock, K=strike, r=risk-free rate, T=time(years), σ=volatility, N()=normal CDF</div>
+        <div class="qm-why">The foundation of options pricing. Understanding it helps you identify mispriced options and design hedging strategies.</div>
+      </div>
+
+      <div class="qm-card">
+        <div class="section-tag">Concept First</div>
+        <div class="qm-def">The Greeks measure how sensitive an option's price is to each input. They're your risk dashboard: Delta tells you directional exposure, Gamma tells you how fast Delta changes, Theta bleeds value every day, Vega profits from volatility spikes, Rho responds to interest rates.</div>
+        <div class="qm-term">The Options Greeks (Δ Γ Θ V ρ)</div>
+        <div class="qm-formula">Delta (Δ): ΔOption / ΔStock — range 0 to 1 for calls, -1 to 0 for puts
+Gamma (Γ): ΔDelta / ΔStock — highest for at-the-money near expiry
+Theta (Θ): ΔOption / Δtime — always negative, time decay accelerates near expiry
+Vega (V): ΔOption / Δvolatility — long options = long Vega
+Rho (ρ): ΔOption / Δinterest rate — minor for short-dated options</div>
+        <div class="qm-why">Market makers delta-hedge continuously to stay directionally neutral. Retail traders use Greeks to manage risk and find asymmetric setups.</div>
+      </div>
+
+      <div class="qm-card">
+        <div class="section-tag">Concept First</div>
+        <div class="qm-def">Implied Volatility (IV) is what the market thinks future volatility will be, extracted backward from the current option price. When IV is high, options are expensive. When IV is low, options are cheap. The VIX is simply the 30-day IV of the S&amp;P 500.</div>
+        <div class="qm-term">Implied Volatility &amp; IV Rank</div>
+        <div class="qm-formula">IV Rank = (Current IV − 52-week low IV) / (52-week high IV − 52-week low IV) × 100
+IV Percentile: what % of days in past year had lower IV than today
+IV Rank > 50 → sell premium (options expensive)
+IV Rank < 30 → buy options (options cheap)</div>
+        <div class="qm-why">Professional options traders don't trade direction — they trade volatility. Selling premium when IV is high and buying when low is the core of many options strategies.</div>
+      </div>
+    </div>
+
+    <!-- ── Portfolio Theory ── -->
+    <div id="tab-portfolio" class="tab-pane">
+
+      <div class="qm-card">
+        <div class="section-tag">Concept First</div>
+        <div class="qm-def">You have two risky assets. If they move together perfectly, combining them doesn't help. But if they move oppositely (correlation = -1), combining them eliminates all risk. The Efficient Frontier is the set of all portfolios that maximize return for a given level of risk. Every optimal portfolio lies on it.</div>
+        <div class="qm-term">Modern Portfolio Theory &amp; Efficient Frontier</div>
+        <div class="qm-formula">Portfolio Return = w1×R1 + w2×R2 + ...
+Portfolio Variance = w1²σ1² + w2²σ2² + 2w1w2σ1σ2ρ12
+Correlation ρ12 = Cov(A,B) / (σA × σB)
+Optimal portfolio = highest Sharpe ratio on the frontier</div>
+        <div class="qm-why">The mathematical proof that diversification reduces risk without sacrificing expected return. The basis of all modern index fund construction.</div>
+        <div class="calc-row">
+          <div class="calc-field"><label>Asset A Return %</label><input class="input" type="number" id="ptRa" value="12" style="width:110px;"/></div>
+          <div class="calc-field"><label>Asset A Std Dev %</label><input class="input" type="number" id="ptSa" value="18" style="width:110px;"/></div>
+          <div class="calc-field"><label>Asset B Return %</label><input class="input" type="number" id="ptRb" value="8" style="width:110px;"/></div>
+          <div class="calc-field"><label>Asset B Std Dev %</label><input class="input" type="number" id="ptSb" value="10" style="width:110px;"/></div>
+          <div class="calc-field"><label>Correlation</label><input class="input" type="number" id="ptCorr" value="0.3" step="0.1" min="-1" max="1" style="width:100px;"/></div>
+          <div class="calc-field"><label>Weight A %</label><input class="input" type="number" id="ptW" value="60" style="width:100px;"/></div>
+          <button class="btn btn-primary" onclick="calcPortfolio()" style="align-self:flex-end;">Calculate</button>
+        </div>
+        <div id="portfolioResult" class="calc-result" style="display:none;"></div>
+      </div>
+
+      <div class="qm-card">
+        <div class="section-tag">Concept First</div>
+        <div class="qm-def">Correlation tells you how two assets move together on a scale of -1 to +1. But correlation is not constant — it spikes toward 1 during market crashes (everything falls together). This is correlation breakdown, and it's why diversification sometimes fails exactly when you need it most.</div>
+        <div class="qm-term">Correlation &amp; Covariance</div>
+        <div class="qm-formula">Covariance = E[(Ri − μi)(Rj − μj)]
+Correlation ρ = Cov(i,j) / (σi × σj)
+ρ = +1: perfect positive | ρ = 0: no relationship | ρ = -1: perfect inverse
+Low/negative correlation between assets → diversification benefit</div>
+        <div class="qm-why">Portfolio construction always starts with correlations. Assets with low correlation reduce portfolio volatility even if their individual risk is high.</div>
+      </div>
+
+      <div class="qm-card">
+        <div class="section-tag">Concept First</div>
+        <div class="qm-def">Factor models decompose a stock's return into exposure to systematic factors: market, size, value, profitability, momentum, etc. The Fama-French 3-Factor model showed that small-cap stocks and value stocks outperform long-term because they carry extra risk that CAPM doesn't capture.</div>
+        <div class="qm-term">Factor Models (Fama-French)</div>
+        <div class="qm-formula">Ri − Rf = α + β_mkt(Rm−Rf) + β_smb(SMB) + β_hml(HML) + ε
+SMB = Small Minus Big (size factor)
+HML = High Minus Low (value factor)
+5-Factor adds: RMW (profitability) + CMA (investment)</div>
+        <div class="qm-why">Every quant fund uses factor models to decompose returns and identify whether alpha is real or just hidden factor exposure. "Smart beta" ETFs are essentially factor portfolios.</div>
+      </div>
+    </div>
+
+    <!-- ── Technical Methods ── -->
+    <div id="tab-technical" class="tab-pane">
+
+      <div class="qm-card">
+        <div class="section-tag">Concept First</div>
+        <div class="qm-def">A moving average smooths out price noise by averaging over a rolling window. Simple Moving Average (SMA) weights all days equally. Exponential Moving Average (EMA) weights recent prices more heavily. When a short-period EMA crosses above a long-period EMA, it's a bullish signal.</div>
+        <div class="qm-term">Moving Averages (SMA / EMA)</div>
+        <div class="qm-formula">SMA(n) = (P1 + P2 + ... + Pn) / n
+EMA(t) = Price(t) × k + EMA(t-1) × (1−k)
+k = 2 / (n + 1)  — smoothing factor
+Golden Cross: 50-day SMA crosses above 200-day SMA → bullish
+Death Cross: 50-day SMA crosses below 200-day SMA → bearish</div>
+        <div class="qm-why">The most widely used technical indicator. Used for trend identification, support/resistance levels, and crossover signals.</div>
+      </div>
+
+      <div class="qm-card">
+        <div class="section-tag">Concept First</div>
+        <div class="qm-def">Bollinger Bands place two bands 2 standard deviations above and below a 20-day SMA. When price touches the upper band, it's statistically overbought. When it touches the lower band, it's oversold. Band squeeze (bands narrowing) signals a breakout is coming.</div>
+        <div class="qm-term">Bollinger Bands</div>
+        <div class="qm-formula">Middle Band = SMA(20)
+Upper Band = SMA(20) + 2 × σ(20)
+Lower Band = SMA(20) − 2 × σ(20)
+%B = (Price − Lower Band) / (Upper Band − Lower Band)
+Bandwidth = (Upper − Lower) / Middle</div>
+        <div class="qm-why">Combines trend-following (middle band) with volatility (band width). %B above 1.0 = price broke above upper band; below 0 = broke below lower band.</div>
+      </div>
+
+      <div class="qm-card">
+        <div class="section-tag">Concept First</div>
+        <div class="qm-def">RSI measures the speed and magnitude of recent price changes. It compares average gains vs average losses over 14 periods. The result is a 0-100 oscillator. Above 70 = overbought (potential sell). Below 30 = oversold (potential buy). Divergence is more powerful: price makes new high but RSI doesn't → weakening momentum.</div>
+        <div class="qm-term">RSI — Relative Strength Index</div>
+        <div class="qm-formula">RS = Avg Gain(14) / Avg Loss(14)
+RSI = 100 − (100 / (1 + RS))
+Overbought: RSI > 70 | Oversold: RSI < 30
+Bullish divergence: price makes lower low, RSI makes higher low
+Bearish divergence: price makes higher high, RSI makes lower high</div>
+        <div class="qm-why">Most effective at identifying reversals in ranging markets. In strong trends, RSI can stay overbought/oversold for extended periods.</div>
+        <div class="calc-row">
+          <div class="calc-field"><label>Avg Gain % (14d)</label><input class="input" type="number" id="rsiAG" value="0.8" step="0.1" style="width:110px;"/></div>
+          <div class="calc-field"><label>Avg Loss % (14d)</label><input class="input" type="number" id="rsiAL" value="0.4" step="0.1" style="width:110px;"/></div>
+          <button class="btn btn-primary" onclick="calcRSI()" style="align-self:flex-end;">Calculate RSI</button>
+        </div>
+        <div id="rsiResult" class="calc-result" style="display:none;"></div>
+      </div>
+
+      <div class="qm-card">
+        <div class="section-tag">Concept First</div>
+        <div class="qm-def">MACD is the difference between a 12-period EMA and a 26-period EMA. The Signal Line is a 9-period EMA of MACD. The histogram shows the gap between them. When MACD crosses above the Signal Line, it's bullish. The histogram turning from negative to positive is an early buy signal.</div>
+        <div class="qm-term">MACD — Moving Average Convergence Divergence</div>
+        <div class="qm-formula">MACD Line = EMA(12) − EMA(26)
+Signal Line = EMA(9) of MACD Line
+Histogram = MACD Line − Signal Line
+Bullish crossover: MACD > Signal Line
+Zero-line cross: MACD crossing 0 confirms trend change</div>
+        <div class="qm-why">Combines trend direction (EMA crossovers) with momentum (histogram). Best used on daily/weekly charts. Less reliable on very short timeframes.</div>
+      </div>
+    </div>
+
+    <!-- ── Chart Patterns ── -->
+    <div id="tab-patterns" class="tab-pane">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;">
+        <div class="qm-card"><div class="qm-term">Head &amp; Shoulders</div><div class="qm-def">Bearish reversal: three peaks — left shoulder, higher head, right shoulder at same level as left. Break of neckline (through the troughs) confirms pattern. Target = head height projected below neckline.</div></div>
+        <div class="qm-card"><div class="qm-term">Inverse H&amp;S</div><div class="qm-def">Bullish reversal: mirror image of H&amp;S. Three troughs with the middle (head) lowest. Break above neckline on high volume confirms. Common bottoming pattern after a downtrend.</div></div>
+        <div class="qm-card"><div class="qm-term">Bull Flag</div><div class="qm-def">Continuation pattern: sharp rally (flagpole) followed by a slight pullback in a channel (flag). Breakout above upper channel line with volume surge = entry signal. Target = flagpole length added to breakout point.</div></div>
+        <div class="qm-card"><div class="qm-term">Bear Flag</div><div class="qm-def">Sharp selloff (pole) followed by a slight bounce in an upward channel. Break below lower channel line on volume = short entry. Target = pole length subtracted from breakdown point.</div></div>
+        <div class="qm-card"><div class="qm-term">Ascending Triangle</div><div class="qm-def">Bullish consolidation: flat upper resistance + rising lower trendline. Buyers making higher lows shows increasing demand. Breakout above resistance usually explosive. Target = triangle height added to breakout level.</div></div>
+        <div class="qm-card"><div class="qm-term">Descending Triangle</div><div class="qm-def">Bearish consolidation: flat support + falling upper trendline. Sellers making lower highs. Break below support on volume = short signal. Mirror image of ascending triangle.</div></div>
+        <div class="qm-card"><div class="qm-term">Cup &amp; Handle</div><div class="qm-def">Bullish continuation: rounded bottom (cup) followed by a small pullback (handle). Handle should be less than 50% of cup depth. Breakout above cup rim is buy signal. Used by William O'Neil's CAN SLIM method.</div></div>
+        <div class="qm-card"><div class="qm-term">Double Bottom / Top</div><div class="qm-def">Double Bottom (W): price tests same support twice, rallies sharply. Double Top (M): price tests same resistance twice, breaks down. Confirmation when price breaks the middle peak/trough (neckline).</div></div>
+        <div class="qm-card"><div class="qm-term">Fibonacci Retracements</div><div class="qm-def">After a move, price often retraces to Fibonacci levels: 23.6%, 38.2%, 50%, 61.8%, 78.6%. The 61.8% level (golden ratio) is the strongest. Traders watch these levels for bounce entries during a pullback in a trend.</div></div>
+        <div class="qm-card"><div class="qm-term">Wedge Patterns</div><div class="qm-def">Rising Wedge: both trendlines slope up but converge → bearish reversal. Falling Wedge: both slope down and converge → bullish reversal. Breakout direction is opposite to wedge direction — counterintuitive but reliable.</div></div>
+        <div class="qm-card"><div class="qm-term">VWAP</div><div class="qm-def">Volume-Weighted Average Price = cumulative (price × volume) / cumulative volume. Intraday benchmark: price above VWAP = bullish bias; below = bearish. Institutional orders use VWAP to minimize market impact.</div></div>
+        <div class="qm-card"><div class="qm-term">Support &amp; Resistance</div><div class="qm-def">Support: price level where buyers historically step in. Resistance: where sellers historically overwhelm buyers. When broken, they swap roles (support becomes resistance, and vice versa). The more times a level is tested, the more significant the eventual break.</div></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+function switchTab(id){
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ── QuantBot AI ──
+let aiLoading=false;
+async function sendAI(){
+  if(aiLoading)return;
+  const input=document.getElementById('aiInput');
+  const msg=input.value.trim();
+  if(!msg)return;
+  appendMsg(msg,'user');
+  input.value='';
+  aiLoading=true;
+  const typingEl=appendMsg('Thinking…','bot');
+  try{
+    const r=await fetch('/api/ai/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})});
+    const d=await r.json();
+    typingEl.textContent=d.reply||d.error||'No response';
+  }catch(e){typingEl.textContent='Error: '+e.message;}
+  aiLoading=false;
+}
+function appendMsg(text,role){
+  const msgs=document.getElementById('aiMessages');
+  const el=document.createElement('div');
+  el.className='msg-'+(role==='user'?'user':'bot');
+  el.textContent=text;
+  msgs.appendChild(el);
+  msgs.scrollTop=msgs.scrollHeight;
+  return el;
+}
+function askQuick(q){document.getElementById('aiInput').value=q;sendAI();}
+
+// ── Monte Carlo ──
+let mcChart=null;
+async function runMC(){
+  const sym=document.getElementById('mcSymbol').value.trim().toUpperCase();
+  const days=parseInt(document.getElementById('mcDays').value)||252;
+  const sims=Math.min(parseInt(document.getElementById('mcSims').value)||500,1000);
+  const r=await fetch('/api/montecarlo',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({symbol:sym,days,simulations:sims})});
+  const d=await r.json();
+  if(d.error){alert(d.error);return;}
+  document.getElementById('mcResult').style.display='block';
+  document.getElementById('mcStats').innerHTML=
+    `<b>${sym}</b> · ${sims} paths · ${days} trading days<br>
+     P5: $${d.percentiles.p5.toFixed(2)} &nbsp;|&nbsp;
+     P25: $${d.percentiles.p25.toFixed(2)} &nbsp;|&nbsp;
+     Median: $${d.percentiles.p50.toFixed(2)} &nbsp;|&nbsp;
+     P75: $${d.percentiles.p75.toFixed(2)} &nbsp;|&nbsp;
+     P95: $${d.percentiles.p95.toFixed(2)}<br>
+     <span style="font-size:.8rem;color:var(--muted);">Current price: $${d.last_price} · μ=${(d.mu_daily*100).toFixed(4)}% · σ=${(d.sigma_daily*100).toFixed(4)}% per day</span>`;
+  if(mcChart)mcChart.destroy();
+  const labels=Array.from({length:days+1},(_,i)=>i===0?'Now':(i%30===0?'Day '+i:''));
+  const ctx=document.getElementById('mcChart').getContext('2d');
+  mcChart=new Chart(ctx,{
+    type:'line',
+    data:{labels,datasets:d.sample_paths.slice(0,30).map(path=>({
+      data:path,borderWidth:1,borderColor:'rgba(34,197,94,0.15)',
+      backgroundColor:'transparent',pointRadius:0,tension:0.3
+    }))},
+    options:{responsive:true,maintainAspectRatio:false,
+      animation:{duration:0},
+      plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:'#7a8f6e',maxTicksLimit:8},grid:{color:'rgba(28,46,23,.4)'}},
+              y:{ticks:{color:'#7a8f6e',callback:v=>'$'+v.toFixed(0)},grid:{color:'rgba(28,46,23,.4)'}}}
+    }
+  });
+}
+
+// ── Calculators ──
+function calcSharpe(){
+  const rp=+document.getElementById('shrRp').value,rf=+document.getElementById('shrRf').value,sig=+document.getElementById('shrSig').value;
+  const s=((rp-rf)/sig).toFixed(3);
+  const rating=s>2?'Excellent 🟢':s>1?'Good 🟡':s>0?'Acceptable 🟠':'Poor 🔴';
+  show('sharpeResult',`Sharpe Ratio: <b>${s}</b> — ${rating}`);
+}
+function calcSortino(){
+  const rp=+document.getElementById('sorRp').value,rf=+document.getElementById('sorRf').value,dd=+document.getElementById('sorDd').value;
+  const s=((rp-rf)/dd).toFixed(3);
+  show('sortinoResult',`Sortino Ratio: <b>${s}</b> — ${s>2?'Excellent 🟢':s>1?'Good 🟡':'Fair 🟠'}`);
+}
+function calcMDD(){
+  const pk=+document.getElementById('mddPeak').value,tr=+document.getElementById('mddTrough').value,ret=+document.getElementById('mddRet').value;
+  const mdd=((tr-pk)/pk*100).toFixed(2);
+  const calmar=(ret/Math.abs(mdd)).toFixed(2);
+  show('mddResult',`Max Drawdown: <b>${mdd}%</b> · Calmar Ratio: <b>${calmar}</b> — ${calmar>1?'Strong 🟢':calmar>0.5?'Acceptable 🟡':'Weak 🔴'}`);
+}
+function calcVaR(){
+  const port=+document.getElementById('varPort').value,sig=+document.getElementById('varSig').value/100,z=+document.getElementById('varConf').value;
+  const var1d=(port*sig*z).toFixed(2);
+  const var10d=(port*sig*z*Math.sqrt(10)).toFixed(2);
+  show('varResult',`Daily VaR: <b>$${var1d}</b> · 10-day VaR: <b>$${var10d}</b>`);
+}
+function calcKelly(){
+  const wr=+document.getElementById('kellyWin').value/100,aw=+document.getElementById('kellyAW').value,al=+document.getElementById('kellyAL').value,cap=+document.getElementById('kellyCapital').value;
+  const lr=1-wr;
+  const f=((wr*aw-lr*al)/aw).toFixed(4);
+  const halfK=(f/2).toFixed(4);
+  const dollarsK=(cap*parseFloat(halfK)).toFixed(2);
+  show('kellyResult',`Full Kelly: <b>${(f*100).toFixed(2)}%</b> · Half-Kelly: <b>${(halfK*100).toFixed(2)}%</b> · Suggested risk: <b>$${dollarsK}</b> per trade`);
+}
+function calcFF(){
+  const acct=+document.getElementById('ffAcct').value,risk=+document.getElementById('ffRisk').value/100;
+  const entry=+document.getElementById('ffEntry').value,stop=+document.getElementById('ffStop').value;
+  const riskDollars=(acct*risk).toFixed(2);
+  const shares=Math.floor(riskDollars/(entry-stop));
+  const totalCost=(shares*entry).toFixed(2);
+  show('ffResult',`Risk per trade: <b>$${riskDollars}</b> · Shares to buy: <b>${shares}</b> · Total position: <b>$${totalCost}</b>`);
+}
+function calcEV(){
+  const wr=+document.getElementById('evWin').value/100,aw=+document.getElementById('evAW').value,al=+document.getElementById('evAL').value;
+  const ev=(wr*aw-(1-wr)*al).toFixed(2);
+  const rr=(aw/al).toFixed(2);
+  const minWin=(1/(1+parseFloat(rr))*100).toFixed(1);
+  show('evResult',`Expected Value per trade: <b>$${ev}</b> · R:R = <b>${rr}:1</b> · Min win rate to break even: <b>${minWin}%</b>`);
+}
+function calcZScore(){
+  const p=+document.getElementById('mrPrice').value,ma=+document.getElementById('mrMA').value,sd=+document.getElementById('mrSD').value;
+  const z=((p-ma)/sd).toFixed(3);
+  const signal=Math.abs(z)>2?(z>0?'⚠ Overbought — potential SHORT/fade opportunity':'⚠ Oversold — potential LONG/mean reversion entry'):'✓ Within normal range (|Z| < 2)';
+  show('zscoreResult',`Z-Score: <b>${z}</b> · ${signal}`);
+}
+function calcCAPM(){
+  const beta=+document.getElementById('capmBeta').value,rf=+document.getElementById('capmRf').value;
+  const rm=+document.getElementById('capmRm').value,actual=+document.getElementById('capmActual').value;
+  const expected=(rf+beta*(rm-rf)).toFixed(2);
+  const alpha=(actual-expected).toFixed(2);
+  show('capmResult',`Expected Return (CAPM): <b>${expected}%</b> · Alpha: <b>${alpha>0?'+':''}${alpha}%</b> — ${alpha>0?'Outperforming ✅':'Underperforming ❌'}`);
+}
+function calcPortfolio(){
+  const ra=+document.getElementById('ptRa').value,sa=+document.getElementById('ptSa').value;
+  const rb=+document.getElementById('ptRb').value,sb=+document.getElementById('ptSb').value;
+  const corr=+document.getElementById('ptCorr').value,wa=+document.getElementById('ptW').value/100;
+  const wb=1-wa;
+  const portR=(wa*ra+wb*rb).toFixed(2);
+  const portVar=wa*wa*sa*sa+wb*wb*sb*sb+2*wa*wb*sa*sb*corr;
+  const portSD=Math.sqrt(portVar).toFixed(2);
+  show('portfolioResult',`Portfolio Return: <b>${portR}%</b> · Portfolio Std Dev: <b>${portSD}%</b> · Diversification benefit: reduced σ vs ${(wa*sa+wb*sb).toFixed(2)}% (no diversification)`);
+}
+function calcRSI(){
+  const ag=+document.getElementById('rsiAG').value,al=+document.getElementById('rsiAL').value;
+  const rs=ag/al;
+  const rsi=(100-(100/(1+rs))).toFixed(1);
+  const signal=rsi>70?'Overbought 🔴 — consider taking profits':rsi<30?'Oversold 🟢 — potential reversal entry':'Neutral zone';
+  show('rsiResult',`RSI: <b>${rsi}</b> — ${signal}`);
+}
+
+function show(id,html){const el=document.getElementById(id);el.innerHTML=html;el.style.display='block';}
+
+async function init(){
+  try{
+    const me=await fetch('/api/me').then(r=>r.json());
+    document.getElementById('navBalance').textContent='$'+parseFloat(me.balance).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  }catch(e){}
+}
+init();
+</script>
+  <script src="/static/js/theme.js"></script>
+</body>
+</html>

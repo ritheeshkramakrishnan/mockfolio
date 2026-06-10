@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Options — MockFolio</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="/">Mock<span>Folio</span></a>
+  <div class="nav-links">
+    <span id="navUser" style="color:var(--muted);font-size:.9rem;"></span>
+    <a href="/logout" class="btn btn-secondary" style="padding:.4rem .9rem;font-size:.85rem;">Log Out</a>
+  </div>
+</nav>
+
+<div class="app-layout">
+  <aside class="sidebar">
+    <a href="/dashboard"><span class="icon">🏠</span> Dashboard</a>
+    <a href="/trade"><span class="icon">💹</span> Trade</a>
+    <a href="/options" class="active"><span class="icon">📊</span> Options</a>
+    <a href="/calls"><span class="icon">📡</span> Market Calls</a>
+    <a href="/signals"><span class="icon">🤖</span> AI Signals</a>
+    <a href="/activity"><span class="icon">📋</span> Activity Log</a>
+    <a href="/learn"><span class="icon">📚</span> AI Tutor</a>
+    <a href="/flashcards"><span class="icon">🃏</span> Flashcards</a>
+  </aside>
+
+  <main class="main-content">
+    <div class="section-head">
+      <h2>Options Trading</h2>
+      <p style="color:var(--muted);font-size:.9rem;">Full options chain with Black-Scholes pricing & Greeks</p>
+    </div>
+
+    <!-- Symbol + Expiry selector -->
+    <div class="card" style="padding:1.2rem 1.5rem;display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:.78rem;color:var(--muted);margin-bottom:.3rem;">SYMBOL</div>
+        <input id="symInput" type="text" value="AAPL" placeholder="e.g. TSLA"
+          style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.5rem .8rem;border-radius:8px;font-size:.95rem;width:110px;text-transform:uppercase;"/>
+      </div>
+      <div>
+        <div style="font-size:.78rem;color:var(--muted);margin-bottom:.3rem;">EXPIRY</div>
+        <select id="expirySelect" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.5rem .8rem;border-radius:8px;font-size:.9rem;"></select>
+      </div>
+      <button onclick="loadChain()" class="btn btn-green">Load Chain</button>
+      <div id="spotDisplay" style="margin-left:auto;text-align:right;">
+        <div style="font-size:.75rem;color:var(--muted);">SPOT PRICE</div>
+        <div id="spotPrice" style="font-size:1.4rem;font-weight:800;color:var(--accent);">—</div>
+      </div>
+    </div>
+
+    <!-- Strategy builder -->
+    <div class="card" style="padding:1.2rem 1.5rem;margin-top:.75rem;">
+      <div style="font-size:.85rem;font-weight:700;margin-bottom:.75rem;color:var(--text);">⚡ Strategy Builder</div>
+      <div style="display:flex;gap:.6rem;flex-wrap:wrap;" id="stratBtns">
+        <button class="btn btn-secondary" onclick="openStrategy('straddle')">Straddle</button>
+        <button class="btn btn-secondary" onclick="openStrategy('bull_call_spread')">Bull Call Spread</button>
+        <button class="btn btn-secondary" onclick="openStrategy('bear_put_spread')">Bear Put Spread</button>
+        <button class="btn btn-secondary" onclick="openStrategy('covered_call')">Covered Call</button>
+      </div>
+      <div id="stratPanel" style="display:none;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);">
+        <div id="stratForm"></div>
+      </div>
+    </div>
+
+    <!-- Options chain table -->
+    <div class="card" style="margin-top:.75rem;padding:1.5rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+        <h3 style="margin:0;font-size:1rem;font-weight:700;">Options Chain</h3>
+        <span style="font-size:.75rem;color:var(--muted);">1 contract = 100 shares &nbsp;|&nbsp; IV: 30%</span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table id="chainTable" style="width:100%;font-size:.8rem;">
+          <thead>
+            <tr style="color:var(--muted);text-align:center;">
+              <th colspan="6" style="color:var(--accent);padding:.4rem;border-right:2px solid var(--border);">CALLS</th>
+              <th style="padding:.4rem;color:var(--text);">STRIKE</th>
+              <th colspan="6" style="color:var(--red);padding:.4rem;border-left:2px solid var(--border);">PUTS</th>
+            </tr>
+            <tr style="color:var(--muted);font-size:.72rem;text-align:center;">
+              <th>Bid</th><th>Ask</th><th>Mid</th><th>Δ Delta</th><th>Θ Theta</th><th style="border-right:2px solid var(--border);">Buy</th>
+              <th style="color:var(--gold);font-weight:800;">Strike</th>
+              <th style="border-left:2px solid var(--border);">Buy</th><th>Δ Delta</th><th>Θ Theta</th><th>Mid</th><th>Ask</th><th>Bid</th>
+            </tr>
+          </thead>
+          <tbody id="chainBody">
+            <tr><td colspan="13" style="text-align:center;color:var(--muted);padding:2rem;">Enter a symbol and click Load Chain</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Open Options Positions -->
+    <div class="card" style="margin-top:.75rem;padding:1.5rem;">
+      <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem;">Open Options Positions</h3>
+      <div id="optPositions" style="color:var(--muted);font-size:.85rem;">Loading…</div>
+    </div>
+  </main>
+</div>
+
+<!-- Trade modal -->
+<div id="tradeModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:2rem;width:340px;max-width:95vw;">
+    <h3 id="modalTitle" style="margin:0 0 1.2rem;font-size:1.05rem;font-weight:700;"></h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1rem;font-size:.82rem;">
+      <div><div style="color:var(--muted);">Strike</div><div id="mStrike" style="font-weight:700;font-size:1rem;"></div></div>
+      <div><div style="color:var(--muted);">Expiry</div><div id="mExpiry" style="font-weight:700;"></div></div>
+      <div><div style="color:var(--muted);">Premium/share</div><div id="mPremium" style="font-weight:700;color:var(--accent);"></div></div>
+      <div><div style="color:var(--muted);">Cost (1 contract)</div><div id="mCost" style="font-weight:700;"></div></div>
+      <div><div style="color:var(--muted);">Delta</div><div id="mDelta"></div></div>
+      <div><div style="color:var(--muted);">Theta/day</div><div id="mTheta"></div></div>
+    </div>
+    <div style="margin-bottom:1rem;">
+      <div style="font-size:.78rem;color:var(--muted);margin-bottom:.3rem;">Contracts</div>
+      <input id="mQty" type="number" value="1" min="1" max="100"
+        style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.5rem .8rem;border-radius:8px;width:100%;font-size:.95rem;"/>
+    </div>
+    <div style="display:flex;gap:.75rem;">
+      <button id="mBuyBtn" onclick="executeTrade('buy')" class="btn btn-green" style="flex:1;">Buy</button>
+      <button id="mSellBtn" onclick="executeTrade('sell')" class="btn btn-secondary" style="flex:1;">Sell to Close</button>
+      <button onclick="closeModal()" class="btn btn-secondary">✕</button>
+    </div>
+    <div id="mError" style="color:var(--red);font-size:.8rem;margin-top:.5rem;display:none;"></div>
+  </div>
+</div>
+
+<script>
+const fmt  = n => '$' + parseFloat(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtS = n => (n >= 0 ? '+' : '') + parseFloat(n).toFixed(4);
+
+let _chain = null;
+let _modalData = {};
+let _currentExpiry = '';
+
+async function loadChain() {
+  const sym = document.getElementById('symInput').value.trim().toUpperCase();
+  if (!sym) return;
+  document.getElementById('chainBody').innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:2rem;">Loading…</td></tr>';
+  try {
+    _chain = await fetch(`/api/options/chain/${sym}`).then(r=>r.json());
+    if (_chain.error) throw new Error(_chain.error);
+    document.getElementById('spotPrice').textContent = fmt(_chain.spot);
+    // populate expiry selector
+    const sel = document.getElementById('expirySelect');
+    sel.innerHTML = _chain.expiries.map(e => `<option value="${e}">${e}</option>`).join('');
+    _currentExpiry = _chain.expiries[0];
+    sel.addEventListener('change', () => { _currentExpiry = sel.value; renderChain(); });
+    renderChain();
+    loadPositions();
+  } catch(e) {
+    document.getElementById('chainBody').innerHTML = `<tr><td colspan="13" style="text-align:center;color:var(--red);padding:2rem;">${e.message}</td></tr>`;
+  }
+}
+
+function renderChain() {
+  if (!_chain || !_chain.chain[_currentExpiry]) return;
+  const rows = _chain.chain[_currentExpiry];
+  const tbody = document.getElementById('chainBody');
+  tbody.innerHTML = rows.map(r => {
+    const atm = r.atm ? 'background:rgba(126,200,80,.06);' : '';
+    const strikeBg = r.atm ? 'background:rgba(201,168,76,.15);color:var(--gold);font-weight:800;' : '';
+    return `<tr style="${atm}cursor:pointer;" onclick="openModal('call',${r.strike},'${_currentExpiry}',${r.call.mid},${r.call.delta},${r.call.theta})">
+      <td style="text-align:center;color:var(--accent);">${fmt(r.call.bid)}</td>
+      <td style="text-align:center;color:var(--accent);">${fmt(r.call.ask)}</td>
+      <td style="text-align:center;font-weight:600;">${fmt(r.call.mid)}</td>
+      <td style="text-align:center;color:var(--muted);">${r.call.delta.toFixed(3)}</td>
+      <td style="text-align:center;color:var(--muted);">${r.call.theta.toFixed(4)}</td>
+      <td style="text-align:center;border-right:2px solid var(--border);">
+        <button class="btn btn-green" style="padding:.2rem .6rem;font-size:.72rem;" onclick="event.stopPropagation();openModal('call',${r.strike},'${_currentExpiry}',${r.call.mid},${r.call.delta},${r.call.theta})">Buy</button>
+      </td>
+      <td style="text-align:center;padding:.5rem .75rem;${strikeBg}">${fmt(r.strike)}</td>
+      <td style="text-align:center;border-left:2px solid var(--border);">
+        <button class="btn" style="padding:.2rem .6rem;font-size:.72rem;background:var(--red);color:#fff;" onclick="event.stopPropagation();openModal('put',${r.strike},'${_currentExpiry}',${r.put.mid},${r.put.delta},${r.put.theta})">Buy</button>
+      </td>
+      <td style="text-align:center;color:var(--muted);">${r.put.delta.toFixed(3)}</td>
+      <td style="text-align:center;color:var(--muted);">${r.put.theta.toFixed(4)}</td>
+      <td style="text-align:center;font-weight:600;">${fmt(r.put.mid)}</td>
+      <td style="text-align:center;color:var(--red);">${fmt(r.put.ask)}</td>
+      <td style="text-align:center;color:var(--red);">${fmt(r.put.bid)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function openModal(optType, strike, expiry, premium, delta, theta) {
+  const sym = document.getElementById('symInput').value.trim().toUpperCase();
+  _modalData = {symbol: sym, option_type: optType, strike, expiry, premium};
+  document.getElementById('modalTitle').textContent =
+    `${sym} $${strike} ${optType.toUpperCase()} — ${expiry}`;
+  document.getElementById('mStrike').textContent = fmt(strike);
+  document.getElementById('mExpiry').textContent = expiry;
+  document.getElementById('mPremium').textContent = fmt(premium);
+  document.getElementById('mCost').textContent = fmt(premium * 100);
+  document.getElementById('mDelta').textContent = delta.toFixed(4);
+  document.getElementById('mTheta').textContent = theta.toFixed(4);
+  document.getElementById('mError').style.display = 'none';
+  document.getElementById('tradeModal').style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('tradeModal').style.display = 'none';
+}
+
+async function executeTrade(side) {
+  const qty = parseInt(document.getElementById('mQty').value) || 1;
+  const errEl = document.getElementById('mError');
+  errEl.style.display = 'none';
+  const res = await fetch('/api/options/trade', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({..._modalData, qty, side})
+  }).then(r=>r.json());
+  if (res.error) { errEl.textContent = res.error; errEl.style.display='block'; return; }
+  closeModal();
+  loadPositions();
+  alert(`✅ ${side.toUpperCase()} ${qty} contract(s) @ ${fmt(res.premium)} | New balance: ${fmt(res.new_balance)}`);
+}
+
+async function loadPositions() {
+  const data = await fetch('/api/options/positions').then(r=>r.json());
+  const el = document.getElementById('optPositions');
+  if (!data.length) { el.innerHTML = '<p style="color:var(--muted);">No open options positions.</p>'; return; }
+  el.innerHTML = `<table style="width:100%;font-size:.82rem;">
+    <thead><tr style="color:var(--muted);">
+      <th>Symbol</th><th>Type</th><th>Strike</th><th>Expiry</th><th>Qty</th><th>Paid</th><th>Current</th><th>P&L</th>
+    </tr></thead>
+    <tbody>${data.map(p => `<tr>
+      <td><b>${p.symbol}</b></td>
+      <td><span style="color:${p.option_type==='call'?'var(--accent)':'var(--red)'};">${p.option_type.toUpperCase()}</span></td>
+      <td>${fmt(p.strike)}</td>
+      <td>${p.expiry}</td>
+      <td>${p.qty}</td>
+      <td>${fmt(p.premium)}</td>
+      <td>${p.current_premium != null ? fmt(p.current_premium) : '—'}</td>
+      <td class="${p.pnl >= 0 ? 'text-green' : 'text-red'}">${p.pnl != null ? (p.pnl >= 0 ? '+' : '') + fmt(p.pnl) : '—'}</td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+// ── Strategy builder ──────────────────────────────────────────────────────────
+function openStrategy(name) {
+  const panel = document.getElementById('stratPanel');
+  const form  = document.getElementById('stratForm');
+  panel.style.display = 'block';
+  const labels = {straddle:'Straddle (buy ATM call + put)',bull_call_spread:'Bull Call Spread',bear_put_spread:'Bear Put Spread',covered_call:'Covered Call (sell OTM call)'};
+  let strikeFields = name === 'straddle' || name === 'covered_call'
+    ? `<div><div style="font-size:.75rem;color:var(--muted);">Strike</div><input id="s1" type="number" placeholder="e.g. 215" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.4rem .6rem;border-radius:6px;width:100px;"/></div>`
+    : `<div><div style="font-size:.75rem;color:var(--muted);">Lower Strike</div><input id="s1" type="number" placeholder="210" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.4rem .6rem;border-radius:6px;width:100px;"/></div>
+       <div><div style="font-size:.75rem;color:var(--muted);">Upper Strike</div><input id="s2" type="number" placeholder="220" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.4rem .6rem;border-radius:6px;width:100px;"/></div>`;
+  form.innerHTML = `<div style="font-size:.9rem;font-weight:700;margin-bottom:.75rem;">${labels[name]}</div>
+    <div style="display:flex;gap:.75rem;align-items:flex-end;flex-wrap:wrap;">
+      ${strikeFields}
+      <div><div style="font-size:.75rem;color:var(--muted);">Qty (contracts)</div><input id="sQty" type="number" value="1" min="1" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.4rem .6rem;border-radius:6px;width:80px;"/></div>
+      <button class="btn btn-green" onclick="executeStrategy('${name}')">Execute</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('stratPanel').style.display='none'">Cancel</button>
+    </div>
+    <div id="stratError" style="color:var(--red);font-size:.8rem;margin-top:.5rem;display:none;"></div>`;
+}
+
+async function executeStrategy(name) {
+  const sym    = document.getElementById('symInput').value.trim().toUpperCase();
+  const expiry = document.getElementById('expirySelect').value;
+  const s1     = parseFloat(document.getElementById('s1').value);
+  const s2     = parseFloat((document.getElementById('s2') || {value:'0'}).value);
+  const qty    = parseInt(document.getElementById('sQty').value) || 1;
+  const errEl  = document.getElementById('stratError');
+  errEl.style.display = 'none';
+  const res = await fetch('/api/options/strategy', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({strategy:name, symbol:sym, expiry, strike1:s1, strike2:s2, qty})
+  }).then(r=>r.json());
+  if (res.error) { errEl.textContent = res.error; errEl.style.display='block'; return; }
+  document.getElementById('stratPanel').style.display = 'none';
+  loadPositions();
+  alert(`✅ ${name.replace(/_/g,' ')} executed. Net cost: ${fmt(res.net_cost)} | Balance: ${fmt(res.new_balance)}`);
+}
+
+// init
+fetch('/api/me').then(r=>r.json()).then(d => document.getElementById('navUser').textContent = d.username);
+loadChain();
+loadPositions();
+</script>
+  <script src="/static/js/theme.js"></script>
+</body>
+</html>

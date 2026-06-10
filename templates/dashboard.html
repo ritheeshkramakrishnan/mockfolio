@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — MockFolio</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="/">Mock<span>Folio</span></a>
+  <div class="nav-links">
+    <span id="navUser" style="color:var(--muted);font-size:.9rem;"></span>
+    <a href="/logout" class="btn btn-secondary" style="padding:.4rem .9rem;font-size:.85rem;">Log Out</a>
+  </div>
+</nav>
+
+<div class="app-layout">
+  <aside class="sidebar">
+    <a href="/dashboard" class="active"><span class="icon">🏠</span> Dashboard</a>
+    <a href="/trade"><span class="icon">💹</span> Trade</a>
+    <a href="/options"><span class="icon">📊</span> Options</a>
+    <a href="/calls"><span class="icon">📡</span> Market Calls</a>
+    <a href="/signals"><span class="icon">🤖</span> AI Signals</a>
+    <a href="/activity"><span class="icon">📋</span> Activity Log</a>
+    <a href="/learn"><span class="icon">🤖</span> AI Tutor</a>
+    <a href="/flashcards"><span class="icon">🃏</span> Flashcards</a>
+  </aside>
+
+  <main class="main-content">
+    <div class="section-head">
+      <h2>Dashboard</h2>
+      <p id="greet" style="color:var(--muted);font-size:.9rem;"></p>
+    </div>
+
+    <!-- stat cards -->
+    <div class="stat-cards" id="statCards">
+      <div class="stat-card">
+        <div class="label">Paper Balance</div>
+        <div class="value blue" id="balance">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Total P&L</div>
+        <div class="value" id="totalPnl">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Open Positions</div>
+        <div class="value blue" id="openPos">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Phase</div>
+        <div class="value" id="phase" style="font-size:1.1rem;text-transform:capitalize;">—</div>
+      </div>
+    </div>
+
+    <!-- Evaluation progress bar -->
+    <div id="evalBar" class="card" style="padding:1.2rem 1.5rem;display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;">
+        <span style="font-size:.85rem;font-weight:600;color:var(--text);">Evaluation Challenge — <span id="evalLabel"></span></span>
+        <span id="evalPct" style="font-size:.85rem;font-weight:700;color:var(--accent);"></span>
+      </div>
+      <div style="background:var(--border);border-radius:99px;height:10px;overflow:hidden;">
+        <div id="evalFill" style="height:100%;border-radius:99px;background:var(--accent);transition:width .5s ease;width:0%;"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:.4rem;font-size:.75rem;color:var(--muted);">
+        <span>$50,000</span>
+        <span id="evalTarget"></span>
+      </div>
+    </div>
+
+    <!-- Portfolio value chart -->
+    <div class="chart-box">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
+        <h3 style="margin:0;">Portfolio Value</h3>
+        <span id="chartPnl" style="font-size:.9rem;font-weight:600;"></span>
+      </div>
+      <canvas id="priceChart"></canvas>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+
+      <!-- open positions -->
+      <div class="card" style="padding:1.5rem;">
+        <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem;">Open Positions</h3>
+        <div class="table-wrap">
+          <table id="posTable">
+            <thead><tr><th>Symbol</th><th>Qty</th><th>Avg</th><th>Current</th><th>Unreal. P&L</th></tr></thead>
+            <tbody id="posTbody"><tr><td colspan="5" style="color:var(--muted);text-align:center;">No open positions</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- recent trades -->
+      <div class="card" style="padding:1.5rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+          <h3 style="font-size:1rem;font-weight:700;margin:0;">Recent Trades</h3>
+          <span id="tzLabel" style="font-size:.75rem;color:var(--muted);"></span>
+        </div>
+        <div class="table-wrap">
+          <table id="tradeTable">
+            <thead><tr><th>Symbol</th><th>Side</th><th>Qty</th><th>Price</th><th>P&L</th><th>Time</th></tr></thead>
+            <tbody id="tradeTbody"><tr><td colspan="6" style="color:var(--muted);text-align:center;">No trades yet</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Autopilot -->
+    <div class="card" style="padding:1.5rem;margin-top:1.5rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+        <div>
+          <h3 style="font-size:1rem;font-weight:700;margin:0;">🤖 AI Autopilot</h3>
+          <p id="autopilotStatus" style="font-size:.8rem;color:var(--muted);margin:.25rem 0 0;">Loading…</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:1rem;">
+          <span id="autopilotBadge" style="font-size:.75rem;padding:.25rem .75rem;border-radius:99px;display:none;"></span>
+          <button id="autopilotBtn" onclick="toggleAutopilot()" class="btn btn-secondary" style="min-width:90px;">Loading…</button>
+          <button id="runNowBtn" onclick="runAutopilot()" class="btn btn-green" style="display:none;">▶ Run Now</button>
+        </div>
+      </div>
+
+      <!-- log -->
+      <div id="autopilotLog" style="display:none;">
+        <div style="font-size:.78rem;font-weight:600;color:var(--muted);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em;">Recent AI Decisions</div>
+        <div id="autopilotLogItems" style="display:flex;flex-direction:column;gap:.5rem;max-height:220px;overflow-y:auto;"></div>
+      </div>
+      <p id="autopilotNoKey" style="display:none;font-size:.82rem;color:var(--red);">⚠ Autopilot requires an Anthropic API key — add ANTHROPIC_API_KEY in Railway Variables.</p>
+    </div>
+
+    <!-- quick actions -->
+    <div class="mt-3 flex gap-2">
+      <a href="/trade" class="btn btn-green">💹 New Trade</a>
+      <a href="/learn" class="btn btn-purple">🤖 Ask QuantBot</a>
+      <a href="/flashcards" class="btn btn-secondary">🃏 Study Flashcards</a>
+    </div>
+  </main>
+</div>
+
+<script>
+const fmt = n => '$' + parseFloat(n).toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtPnl = n => {
+  const v = parseFloat(n);
+  return (v >= 0 ? '+' : '') + fmt(v);
+};
+
+// ── timezone detection ────────────────────────────────────────────────────────
+const USER_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+// Map IANA timezone to a short friendly label
+function tzShortName(tz) {
+  // Get the abbreviated name from a sample date
+  try {
+    const abbr = new Intl.DateTimeFormat('en-US', {timeZone: tz, timeZoneName: 'short'})
+      .formatToParts(new Date())
+      .find(p => p.type === 'timeZoneName')?.value || tz;
+    return abbr;
+  } catch(e) { return tz; }
+}
+
+// Parse a datetime string as UTC regardless of source format
+function parseUTC(s) {
+  if (!s) return new Date();
+  let str = s.toString().trim();
+  // strip timezone offset (+00, +00:00) — treat everything as UTC
+  str = str.replace(/[+-]\d{2}:\d{2}$/, '').replace(/[+-]\d{2}$/, '');
+  // replace space with T for ISO 8601
+  str = str.replace(' ', 'T');
+  // ensure Z suffix
+  if (!str.endsWith('Z')) str += 'Z';
+  return new Date(str);
+}
+
+function fmtTime(s) {
+  const d = parseUTC(s);
+  return d.toLocaleString('en-US', {
+    timeZone: USER_TZ,
+    month: 'short', day: 'numeric',
+    hour: 'numeric', minute: '2-digit',
+    hour12: true
+  });
+}
+
+async function loadDashboard() {
+  const [me, positions] = await Promise.all([
+    fetch('/api/me').then(r=>r.json()),
+    fetch('/api/positions').then(r=>r.json())
+  ]);
+
+  document.getElementById('navUser').textContent = me.username;
+  document.getElementById('greet').textContent =
+    `Welcome back, ${me.username}! Your account is in ${me.phase} phase.`;
+
+  document.getElementById('balance').textContent = fmt(me.balance);
+  const pnlEl = document.getElementById('totalPnl');
+  pnlEl.textContent = fmtPnl(me.total_pnl);
+  pnlEl.className = 'value ' + (me.total_pnl >= 0 ? 'green' : 'red');
+
+  document.getElementById('openPos').textContent = positions.length;
+  document.getElementById('phase').textContent = me.phase;
+
+  // show timezone label
+  document.getElementById('tzLabel').textContent = tzShortName(USER_TZ);
+
+  // ── evaluation progress bar ─────────────────────────────────────────────────
+  const phaseEl = document.getElementById('phase');
+  const isFunded = me.phase === 'funded';
+  phaseEl.textContent = isFunded ? '🏆 Funded' : 'Evaluation';
+  phaseEl.className = 'value ' + (isFunded ? 'green' : 'blue');
+
+  const evalBar = document.getElementById('evalBar');
+  evalBar.style.display = 'block';
+
+  if (isFunded) {
+    document.getElementById('evalLabel').textContent = 'Challenge Passed!';
+    document.getElementById('evalPct').textContent = '✅ Funded';
+    document.getElementById('evalFill').style.width = '100%';
+    document.getElementById('evalFill').style.background = 'var(--accent)';
+    document.getElementById('evalTarget').textContent = fmt(me.profit_target);
+  } else {
+    const currentValue = me.balance + positions.reduce((sum, p) => sum + (p.unrealized_pnl || 0), 0);
+    const gained = Math.max(0, currentValue - me.starting_balance);
+    const needed = me.profit_target - me.starting_balance;
+    const pct = Math.min(100, (gained / needed) * 100);
+    document.getElementById('evalLabel').textContent =
+      `Need ${fmt(me.profit_target - currentValue)} more to go Funded`;
+    document.getElementById('evalPct').textContent = pct.toFixed(1) + '%';
+    document.getElementById('evalFill').style.width = pct + '%';
+    document.getElementById('evalTarget').textContent = fmt(me.profit_target) + ' target (15%)';
+  }
+
+  // positions table
+  const posTbody = document.getElementById('posTbody');
+  if (positions.length > 0) {
+    posTbody.innerHTML = positions.map(p => `
+      <tr>
+        <td><b>${p.symbol}</b></td>
+        <td>${p.qty}</td>
+        <td>${fmt(p.avg_price)}</td>
+        <td>${fmt(p.current_price)}</td>
+        <td class="${p.unrealized_pnl >= 0 ? 'text-green' : 'text-red'}">${fmtPnl(p.unrealized_pnl)}</td>
+      </tr>`).join('');
+  }
+
+  // recent trades
+  const tradeTbody = document.getElementById('tradeTbody');
+  if (me.recent_trades.length > 0) {
+    tradeTbody.innerHTML = me.recent_trades.map(t => `
+      <tr>
+        <td><b>${t.symbol}</b></td>
+        <td><span class="badge ${t.side}">${t.side.toUpperCase()}</span></td>
+        <td>${t.qty}</td>
+        <td>${fmt(t.price)}</td>
+        <td class="${t.pnl >= 0 ? 'text-green' : 'text-red'}">${t.side==='sell' ? fmtPnl(t.pnl) : '—'}</td>
+        <td style="color:var(--muted);font-size:.8rem;">${fmtTime(t.executed_at)}</td>
+      </tr>`).join('');
+  }
+}
+
+async function loadChart() {
+  try {
+    const data = await fetch('/api/portfolio/history').then(r=>r.json());
+    const START = 50000;
+
+    const labels = data.map(d => {
+      const dt = new Date(d.recorded_at);
+      return dt.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' ' +
+             dt.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+    });
+    const values = data.map(d => d.value);
+    const latest = values[values.length - 1] || START;
+    const gain = latest - START;
+    const gainPct = ((gain / START) * 100).toFixed(2);
+    const isUp = gain >= 0;
+
+    // show P&L badge
+    const pnlEl = document.getElementById('chartPnl');
+    pnlEl.textContent = (isUp ? '+' : '') + fmt(gain) + ' (' + (isUp ? '+' : '') + gainPct + '%)';
+    pnlEl.style.color = isUp ? 'var(--accent)' : 'var(--red)';
+
+    const lineColor = isUp ? '#7ec850' : '#d45f5f';
+    const fillColor = isUp ? 'rgba(126,200,80,0.08)' : 'rgba(212,95,95,0.08)';
+
+    const ctx = document.getElementById('priceChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Portfolio Value',
+            data: values,
+            borderColor: lineColor,
+            backgroundColor: fillColor,
+            borderWidth: 2,
+            fill: true,
+            tension: 0.3,
+            pointRadius: data.length <= 20 ? 4 : 2,
+            pointBackgroundColor: lineColor,
+          },
+          {
+            label: 'Starting Balance',
+            data: Array(values.length).fill(START),
+            borderColor: 'rgba(200,200,200,0.25)',
+            borderWidth: 1,
+            borderDash: [6,4],
+            fill: false,
+            pointRadius: 0,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                if (ctx.datasetIndex === 1) return 'Start: $50,000';
+                const v = ctx.parsed.y;
+                const diff = v - START;
+                return `Value: ${fmt(v)}  (${diff>=0?'+':''}${fmt(diff)})`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,.04)' }, ticks: { color: '#7a9b6e', maxTicksLimit: 8, maxRotation: 0 } },
+          y: { grid: { color: 'rgba(255,255,255,.04)' }, ticks: { color: '#7a9b6e', callback: v => '$'+v.toLocaleString() } }
+        }
+      }
+    });
+  } catch(e) {
+    document.querySelector('.chart-box').innerHTML = '<p style="color:var(--muted);padding:1rem;">No trading history yet — make your first trade to see your portfolio chart.</p>';
+  }
+}
+
+// ── autopilot ─────────────────────────────────────────────────────────────────
+let _autopilotEnabled = false;
+let _autopilotTimer = null;
+
+function renderLog(logs) {
+  const container = document.getElementById('autopilotLogItems');
+  if (!logs || logs.length === 0) {
+    container.innerHTML = '<p style="color:var(--muted);font-size:.82rem;">No decisions yet — AI will act on the next run.</p>';
+    return;
+  }
+  container.innerHTML = logs.map(l => {
+    const color = l.action==='BUY' ? 'var(--accent)' : l.action==='SELL' ? 'var(--red)' : 'var(--muted)';
+    const detail = l.symbol ? ` ${l.qty} × ${l.symbol} @ ${l.price ? '$'+parseFloat(l.price).toFixed(2) : '—'}` : '';
+    return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.6rem .9rem;font-size:.82rem;">
+      <span style="color:${color};font-weight:700;">${l.action}</span>${detail}
+      <span style="color:var(--muted);float:right;">${fmtTime(l.executed_at)}</span>
+      <div style="color:var(--text);margin-top:.25rem;opacity:.8;">${l.reasoning}</div>
+    </div>`;
+  }).join('');
+}
+
+async function loadAutopilot() {
+  const data = await fetch('/api/autopilot/status').then(r=>r.json());
+  _autopilotEnabled = data.enabled;
+
+  if (!data.ai_available) {
+    document.getElementById('autopilotNoKey').style.display = 'block';
+    document.getElementById('autopilotBtn').style.display = 'none';
+    document.getElementById('autopilotStatus').textContent = 'Requires Anthropic API key';
+    return;
+  }
+
+  const btn = document.getElementById('autopilotBtn');
+  const badge = document.getElementById('autopilotBadge');
+  const runBtn = document.getElementById('runNowBtn');
+  const statusEl = document.getElementById('autopilotStatus');
+  const logDiv = document.getElementById('autopilotLog');
+
+  btn.textContent = _autopilotEnabled ? 'Turn Off' : 'Turn On';
+  btn.className = _autopilotEnabled ? 'btn btn-secondary' : 'btn btn-green';
+  badge.style.display = _autopilotEnabled ? 'inline' : 'none';
+  badge.textContent = '● ACTIVE';
+  badge.style.background = 'rgba(126,200,80,.15)';
+  badge.style.color = 'var(--accent)';
+  runBtn.style.display = _autopilotEnabled ? 'inline-flex' : 'none';
+  statusEl.textContent = _autopilotEnabled
+    ? 'AI is managing your portfolio — runs every 5 minutes'
+    : 'AI will automatically buy and sell on your behalf';
+
+  if (data.logs.length > 0) {
+    logDiv.style.display = 'block';
+    renderLog(data.logs);
+  }
+
+  // schedule 5-min runs when enabled
+  if (_autopilotEnabled && !_autopilotTimer) {
+    _autopilotTimer = setInterval(runAutopilot, 5 * 60 * 1000);
+  } else if (!_autopilotEnabled && _autopilotTimer) {
+    clearInterval(_autopilotTimer);
+    _autopilotTimer = null;
+  }
+}
+
+async function toggleAutopilot() {
+  const btn = document.getElementById('autopilotBtn');
+  btn.disabled = true;
+  btn.textContent = '…';
+  const data = await fetch('/api/autopilot/toggle', {method:'POST'}).then(r=>r.json());
+  _autopilotEnabled = data.enabled;
+  await loadAutopilot();
+  btn.disabled = false;
+  if (_autopilotEnabled) runAutopilot(); // run immediately on enable
+}
+
+async function runAutopilot() {
+  const runBtn = document.getElementById('runNowBtn');
+  const statusEl = document.getElementById('autopilotStatus');
+  if (runBtn) { runBtn.disabled = true; runBtn.textContent = '⏳ Running…'; }
+  statusEl.textContent = 'AI is analyzing the market…';
+  try {
+    const data = await fetch('/api/autopilot/run', {method:'POST'}).then(r=>r.json());
+    if (data.ok) {
+      await loadAutopilot();
+      await loadDashboard(); // refresh balance + positions
+    }
+  } catch(e) { console.error('autopilot run failed', e); }
+  if (runBtn) { runBtn.disabled = false; runBtn.textContent = '▶ Run Now'; }
+}
+
+loadDashboard();
+loadChart();
+loadAutopilot();
+</script>
+  <script src="/static/js/theme.js"></script>
+</body>
+</html>

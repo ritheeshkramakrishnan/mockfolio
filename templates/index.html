@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MockFolio — Master Markets Risk-Free</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+
+<!-- ── nav ── -->
+<nav>
+  <div class="nav-logo">Mock<span>Folio</span></div>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#how">How It Works</a>
+    <a href="#pricing">Pricing</a>
+    <a href="/login" class="btn btn-secondary">Log In</a>
+    <a href="/register" class="btn btn-primary">Get Started Free</a>
+  </div>
+</nav>
+
+<!-- ── hero ── -->
+<section class="hero">
+  <div class="hero-badge">🚀 No Real Money. All Real Skills.</div>
+  <h1>Trade Like a Funded Trader<br><span class="highlight">Without the Risk</span></h1>
+  <p>Master technical analysis, quant methods, and risk management on a $50,000 paper account powered by real market data.</p>
+  <div class="hero-cta">
+    <a href="/register" class="btn btn-primary">Start Free — $50k Account</a>
+    <a href="#how" class="btn btn-secondary">See How It Works</a>
+  </div>
+
+  <!-- animated ticker strip -->
+  <div class="ticker-strip mt-3" id="tickerStrip">
+    <div class="ticker-inner" id="tickerInner">Loading market data…</div>
+  </div>
+</section>
+
+<!-- ── stats ── -->
+<div class="stats-bar">
+  <div class="stat-item"><div class="num">$50K</div><div class="lbl">Starting Paper Balance</div></div>
+  <div class="stat-item"><div class="num">Real</div><div class="lbl">Yahoo Finance Prices</div></div>
+  <div class="stat-item"><div class="num">AI</div><div class="lbl">Powered Tutor (Claude)</div></div>
+  <div class="stat-item"><div class="num">50+</div><div class="lbl">Quant Flashcards</div></div>
+  <div class="stat-item"><div class="num">Free</div><div class="lbl">No Credit Card Needed</div></div>
+</div>
+
+<!-- ── features ── -->
+<section class="section" id="features">
+  <div class="section-title">Everything You Need to Trade Professionally</div>
+  <div class="section-sub">Real tools. Zero risk.</div>
+  <div class="cards-grid">
+    <div class="card">
+      <div class="card-icon">📈</div>
+      <h3>Live Paper Trading</h3>
+      <p>Execute buy/sell orders using real-time live market prices. Watch your portfolio move with the market.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🤖</div>
+      <h3>AI Tutor (QuantBot)</h3>
+      <p>Ask Claude-powered QuantBot anything — pattern recognition, strategy breakdowns, risk management, and more.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🎲</div>
+      <h3>Monte Carlo Simulator</h3>
+      <p>Run 500+ simulation paths on any ticker. See probability distributions of future price outcomes.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🃏</div>
+      <h3>Quant Flashcards</h3>
+      <p>50+ terms — Sharpe ratio, VaR, Kelly criterion, alpha, beta, MACD, and more. Track your learning progress.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">📊</div>
+      <h3>Quant Methods Lab</h3>
+      <p>Interactive explanations of Sharpe ratio, Value at Risk, Kelly criterion, mean reversion, and momentum strategies.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🏆</div>
+      <h3>Evaluation Phases</h3>
+      <p>Just like funded trader firms — pass your evaluation phase by hitting profit targets while respecting drawdown limits.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── how it works ── -->
+<section class="section" id="how">
+  <div class="section-title">How It Works</div>
+  <div class="section-sub">Three steps from zero to funded trader mindset</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h4>Create Your Free Account</h4>
+        <p>Sign up in seconds. Receive a $50,000 simulated paper trading account funded instantly — no credit card, no risk.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h4>Trade with Real Market Data</h4>
+        <p>Execute trades on stocks, ETFs, and indices using live live market prices. Your positions, P&L, and balance update in real time.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h4>Learn from QuantBot & Quant Lab</h4>
+        <p>Ask the AI tutor about any pattern or strategy. Run Monte Carlo simulations. Study flashcards. Understand your edge before risking real capital.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── pricing ── -->
+<section class="section" id="pricing">
+  <div class="section-title">Simple Pricing</div>
+  <div class="section-sub">Start free, upgrade when you're ready</div>
+  <div class="pricing-grid">
+    <div class="pricing-card">
+      <div class="font-bold" style="color:var(--muted);font-size:.85rem;">FREE</div>
+      <div class="price">$0 <span>/forever</span></div>
+      <ul class="pricing-list">
+        <li>$50,000 paper account</li>
+        <li>Real live market prices</li>
+        <li>Full Quant Flashcards</li>
+        <li>AI Tutor (basic)</li>
+        <li>Monte Carlo simulator</li>
+      </ul>
+      <a href="/register" class="btn btn-secondary w-full" style="justify-content:center;">Get Started</a>
+    </div>
+    <div class="pricing-card featured">
+      <div class="font-bold" style="color:var(--accent);font-size:.85rem;">PRO</div>
+      <div class="price">$29 <span>/month</span></div>
+      <ul class="pricing-list">
+        <li>Everything in Free</li>
+        <li>Unlimited AI tutor messages</li>
+        <li>Multiple paper accounts</li>
+        <li>Advanced analytics & reports</li>
+        <li>Priority support</li>
+      </ul>
+      <a href="/register" class="btn btn-primary w-full" style="justify-content:center;">Start Pro Trial</a>
+    </div>
+    <div class="pricing-card">
+      <div class="font-bold" style="color:var(--muted);font-size:.85rem;">TEAM</div>
+      <div class="price">$99 <span>/month</span></div>
+      <ul class="pricing-list">
+        <li>Everything in Pro</li>
+        <li>Up to 10 traders</li>
+        <li>Leaderboard & competitions</li>
+        <li>Custom challenges</li>
+        <li>Admin dashboard</li>
+      </ul>
+      <a href="/register" class="btn btn-ghost w-full" style="justify-content:center;">Contact Us</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA banner ── -->
+<section style="padding:4rem 2rem;text-align:center;background:linear-gradient(135deg,rgba(0,212,255,.06),rgba(124,58,237,.06));border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+  <h2 style="font-size:2rem;font-weight:900;margin-bottom:1rem;">Ready to Think Like a Quant?</h2>
+  <p style="color:var(--muted);margin-bottom:2rem;">No capital needed. All the skills that matter.</p>
+  <a href="/register" class="btn btn-primary" style="padding:.85rem 2.5rem;font-size:1.05rem;">Create Free Account →</a>
+</section>
+
+<footer>
+  © 2025 MockFolio · Built for educational purposes only · Not financial advice
+</footer>
+
+<!-- ticker strip styles -->
+<style>
+.ticker-strip {
+  width: 100%; overflow: hidden; background: rgba(0,212,255,.05);
+  border: 1px solid rgba(0,212,255,.15); border-radius: 10px; padding: .5rem 0;
+}
+.ticker-inner { display: flex; gap: 3rem; white-space: nowrap; font-size: .85rem;
+  color: var(--muted); animation: scroll-left 30s linear infinite; padding: 0 2rem; }
+.ticker-inner span.up { color: var(--green); }
+.ticker-inner span.dn { color: var(--red); }
+@keyframes scroll-left { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+</style>
+
+<script>
+async function loadTicker() {
+  const symbols = ['AAPL','MSFT','TSLA','SPY','NVDA','GOOGL','META','AMZN'];
+  const inner = document.getElementById('tickerInner');
+  inner.innerHTML = symbols.map(s => `<span id="tick-${s}">⏳ ${s}</span>`).join('') +
+                    symbols.map(s => `<span id="tick2-${s}">⏳ ${s}</span>`).join('');
+
+  // We can't hit /api/quote without login, so show static demo
+  const demo = {AAPL:'+0.84%',MSFT:'+1.12%',TSLA:'-0.45%',SPY:'+0.32%',NVDA:'+2.1%',GOOGL:'+0.67%',META:'-0.22%',AMZN:'+0.91%'};
+  const prices = {AAPL:'$214.32',MSFT:'$418.56',TSLA:'$248.10',SPY:'$547.80',NVDA:'$134.22',GOOGL:'$192.48',META:'$583.12',AMZN:'$206.34'};
+  symbols.forEach(s => {
+    const pct = demo[s];
+    const isUp = pct.startsWith('+');
+    const html = `<span class="${isUp?'up':'dn'}">${s} ${prices[s]} <b>${pct}</b></span>`;
+    ['tick-','tick2-'].forEach(p => {
+      const el = document.getElementById(p+s);
+      if (el) el.outerHTML = html;
+    });
+  });
+}
+loadTicker();
+</script>
+  <script src="/static/js/theme.js"></script>
+</body>
+</html>

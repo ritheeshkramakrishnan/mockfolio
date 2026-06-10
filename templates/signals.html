@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Signals — MockFolio</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <style>
+    .signals-grid { display: grid; grid-template-columns: 1fr 380px; gap: 1.5rem; align-items: start; }
+    .signal-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 1.25rem 1.5rem; margin-bottom: 1rem;
+      transition: border-color .2s;
+    }
+    .signal-card:hover { border-color: var(--accent); }
+    .signal-card.buy  { border-left: 4px solid var(--green); }
+    .signal-card.sell { border-left: 4px solid var(--red); }
+    .sig-header { display: flex; align-items: center; gap: .75rem; margin-bottom: .75rem; }
+    .sig-ticker { font-size: 1.35rem; font-weight: 800; color: var(--cream); }
+    .sig-dir { font-size: .75rem; font-weight: 700; padding: .25rem .65rem; border-radius: 6px; letter-spacing: .05em; }
+    .sig-dir.buy  { background: rgba(34,197,94,.15); color: var(--green); }
+    .sig-dir.sell { background: rgba(248,113,113,.15); color: var(--red); }
+    .sig-conf { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; }
+    .conf-bar { width: 80px; height: 6px; background: var(--border); border-radius: 3px; margin-top: 4px; }
+    .conf-fill { height: 100%; border-radius: 3px; }
+    .sig-meta { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin-bottom: .75rem; }
+    .sig-meta-item { font-size: .8rem; }
+    .sig-meta-item .lbl { color: var(--muted); margin-bottom: .1rem; }
+    .sig-meta-item .val { color: var(--text); font-weight: 600; }
+    .sig-thesis { font-size: .88rem; color: var(--text); margin-bottom: .5rem; line-height: 1.5; }
+    .sig-risk { font-size: .8rem; color: #f59e0b; background: rgba(245,158,11,.08);
+                border-radius: 8px; padding: .5rem .75rem; margin-bottom: .75rem; }
+    .sig-trigger { font-size: .75rem; color: var(--muted); font-style: italic; margin-bottom: .85rem;
+                   padding-left: .75rem; border-left: 2px solid var(--border); }
+    .sig-action { display: flex; gap: .5rem; }
+    .news-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 10px; padding: .9rem 1rem; margin-bottom: .75rem;
+      transition: border-color .15s;
+    }
+    .news-card:hover { border-color: rgba(34,197,94,.3); }
+    .news-source { font-size: .7rem; color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+    .news-title { font-size: .88rem; color: var(--text); font-weight: 600; margin: .25rem 0 .3rem; line-height: 1.4; }
+    .news-title a { color: inherit; text-decoration: none; }
+    .news-title a:hover { color: var(--accent); }
+    .news-desc { font-size: .78rem; color: var(--muted); line-height: 1.4; }
+    .news-date { font-size: .7rem; color: var(--muted); margin-top: .3rem; }
+    .status-bar {
+      display: flex; align-items: center; gap: 1rem;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: .65rem 1rem; margin-bottom: 1.5rem;
+      font-size: .82rem;
+    }
+    .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--green);
+             animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.3} }
+    .skeleton { background: var(--surface); border-radius: 8px; animation: shimmer 1.5s infinite; }
+    @keyframes shimmer { 0%{opacity:.5}50%{opacity:1}100%{opacity:.5} }
+    .empty-news { text-align:center; padding: 2rem; color: var(--muted); font-size:.9rem; }
+  </style>
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="/">Mock<span>Folio</span></a>
+  <div class="nav-links">
+    <span id="navBalance" style="color:var(--accent);font-weight:700;font-size:.9rem;"></span>
+    <a href="/logout" class="btn btn-secondary" style="padding:.4rem .9rem;font-size:.85rem;">Log Out</a>
+  </div>
+</nav>
+
+<div class="app-layout">
+  <aside class="sidebar">
+    <a href="/dashboard"><span class="icon">🏠</span> Dashboard</a>
+    <a href="/trade"><span class="icon">💹</span> Trade</a>
+    <a href="/options"><span class="icon">📊</span> Options</a>
+    <a href="/calls"><span class="icon">📡</span> Market Calls</a>
+    <a href="/signals" class="active"><span class="icon">🤖</span> AI Signals</a>
+    <a href="/activity"><span class="icon">📋</span> Activity Log</a>
+    <a href="/learn"><span class="icon">📚</span> AI Tutor</a>
+    <a href="/flashcards"><span class="icon">🃏</span> Flashcards</a>
+  </aside>
+
+  <main class="main-content">
+    <div class="section-head" style="margin-bottom:1rem;">
+      <h2>📡 AI Market Signals</h2>
+      <p style="color:var(--muted);font-size:.9rem;">Live news → Claude AI analysis → Paper trade recommendations · Educational only</p>
+    </div>
+
+    <div class="status-bar">
+      <div class="pulse" id="statusDot"></div>
+      <span id="statusText" style="color:var(--muted);">Loading signals…</span>
+      <span style="margin-left:auto;color:var(--muted);font-size:.78rem;">
+        Generated: <b id="genTime" style="color:var(--text);">—</b>
+        &nbsp;·&nbsp;
+        Next update: <b id="countdown" style="color:var(--accent);">—</b>
+      </span>
+      <button class="btn btn-secondary" style="font-size:.78rem;padding:.3rem .7rem;" onclick="forceRefresh()">↻ Refresh Now</button>
+    </div>
+
+    <div class="signals-grid">
+      <!-- Left: AI signals -->
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+          <h3 style="font-size:.95rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">AI Trade Signals</h3>
+          <span style="font-size:.75rem;color:var(--muted);" id="sigCount"></span>
+        </div>
+        <div id="signalsContainer">
+          <!-- skeleton -->
+          <div class="signal-card skeleton" style="height:180px;"></div>
+          <div class="signal-card skeleton" style="height:180px;"></div>
+          <div class="signal-card skeleton" style="height:180px;"></div>
+        </div>
+
+        <div style="margin-top:1.5rem;padding:1rem;background:var(--surface);border:1px solid var(--border);border-radius:10px;font-size:.78rem;color:var(--muted);">
+          ⚠ <b style="color:var(--text);">Disclaimer:</b> These are AI-generated signals for educational paper trading only.
+          Not financial advice. Always do your own research before trading real capital.
+        </div>
+      </div>
+
+      <!-- Right: Live news feed -->
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+          <h3 style="font-size:.95rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">Market News</h3>
+          <span style="font-size:.75rem;color:var(--muted);" id="newsCount"></span>
+        </div>
+        <div id="newsContainer" style="max-height:700px;overflow-y:auto;">
+          <div class="news-card skeleton" style="height:90px;"></div>
+          <div class="news-card skeleton" style="height:90px;"></div>
+          <div class="news-card skeleton" style="height:90px;"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const fmt = n => '$' + parseFloat(n).toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2});
+
+function confColor(c) {
+  if (c >= 70) return '#22c55e';
+  if (c >= 50) return '#f59e0b';
+  return '#f87171';
+}
+
+function renderSignal(s) {
+  const isUp = s.direction === 'BUY';
+  const conf = parseInt(s.confidence) || 50;
+  return `
+  <div class="signal-card ${isUp ? 'buy' : 'sell'}">
+    <div class="sig-header">
+      <span class="sig-ticker">${s.ticker}</span>
+      <span class="sig-dir ${isUp ? 'buy' : 'sell'}">${s.direction}</span>
+      <div class="sig-conf">
+        <span style="font-size:.75rem;color:var(--muted);">Confidence</span>
+        <span style="font-size:1rem;font-weight:700;color:${confColor(conf)};">${conf}%</span>
+        <div class="conf-bar">
+          <div class="conf-fill" style="width:${conf}%;background:${confColor(conf)};"></div>
+        </div>
+      </div>
+    </div>
+    <div class="sig-meta">
+      <div class="sig-meta-item"><div class="lbl">Timeframe</div><div class="val">${s.timeframe || '1-5 days'}</div></div>
+      <div class="sig-meta-item"><div class="lbl">Entry</div><div class="val">Market Price</div></div>
+    </div>
+    <div class="sig-thesis">📊 ${s.thesis}</div>
+    <div class="sig-risk">⚠ Risk: ${s.risk}</div>
+    <div class="sig-trigger">📰 ${s.news_trigger}</div>
+    <div class="sig-action">
+      <button class="btn ${isUp ? 'btn-green' : 'btn-primary'}"
+              style="font-size:.8rem;padding:.35rem .9rem;flex:1;justify-content:center;"
+              onclick="paperTrade('${s.ticker}','${isUp ? 'buy' : 'sell'}')">
+        ${isUp ? '🟢 Paper BUY' : '🔴 Paper SELL'} ${s.ticker}
+      </button>
+      <button class="btn btn-secondary"
+              style="font-size:.8rem;padding:.35rem .9rem;"
+              onclick="window.location='/trade'">View Chart</button>
+    </div>
+  </div>`;
+}
+
+function renderNews(articles) {
+  if (!articles || articles.length === 0) {
+    return `<div class="empty-news">
+      <div style="font-size:1.5rem;margin-bottom:.5rem;">📡</div>
+      <div>No live news available.</div>
+      <div style="margin-top:.5rem;font-size:.8rem;">The app fetches from MarketWatch, Reuters & CNBC.<br>Ensure the server has internet access.</div>
+    </div>`;
+  }
+  return articles.map(a => {
+    const titleEl = a.link
+      ? `<a href="${a.link}" target="_blank" rel="noopener">${a.title}</a>`
+      : a.title;
+    return `
+    <div class="news-card">
+      <div class="news-source">${a.source || 'News'}</div>
+      <div class="news-title">${titleEl}</div>
+      ${a.description ? `<div class="news-desc">${a.description.replace(/<[^>]+>/g,'').substring(0,160)}</div>` : ''}
+      ${a.pub_date ? `<div class="news-date">${a.pub_date}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+async function loadSignals() {
+  try {
+    const data = await fetch('/api/signals').then(r => r.json());
+
+    // status bar
+    const dot = document.getElementById('statusDot');
+    const statusEl = document.getElementById('statusText');
+    if (data.live_news) {
+      dot.style.background = '#22c55e';
+      statusEl.innerHTML = `<span style="color:#22c55e;">● LIVE</span> — ${data.news_count} news articles · AI analysis by QuantBot`;
+    } else {
+      dot.style.background = '#f59e0b';
+      statusEl.innerHTML = `<span style="color:#f59e0b;">◐ Demo signals</span> — Add API keys for live analysis`;
+    }
+    document.getElementById('genTime').textContent = data.generated_at || '—';
+    document.getElementById('sigCount').textContent = `${(data.signals||[]).length} signals`;
+    document.getElementById('newsCount').textContent = `${(data.news||[]).length} articles`;
+
+    // signals
+    const sigContainer = document.getElementById('signalsContainer');
+    if (data.signals && data.signals.length) {
+      sigContainer.innerHTML = data.signals.map(renderSignal).join('');
+    } else {
+      sigContainer.innerHTML = '<div style="color:var(--muted);text-align:center;padding:2rem;">No signals available</div>';
+    }
+
+    // news
+    document.getElementById('newsContainer').innerHTML = renderNews(data.news);
+
+    // update nav balance
+    try {
+      const me = await fetch('/api/me').then(r => r.json());
+      document.getElementById('navBalance').textContent = fmt(me.balance);
+    } catch(e) {}
+
+  } catch(e) {
+    document.getElementById('statusText').innerHTML = '<span style="color:var(--red);">✗ Failed to load signals</span>';
+  }
+}
+
+async function forceRefresh() {
+  _nextRefreshAt = Date.now() + REFRESH_INTERVAL;
+  document.getElementById('signalsContainer').innerHTML =
+    '<div class="signal-card skeleton" style="height:180px;"></div>'.repeat(3);
+  document.getElementById('newsContainer').innerHTML =
+    '<div class="news-card skeleton" style="height:90px;"></div>'.repeat(4);
+  document.getElementById('statusText').textContent = 'Fetching latest news and generating AI signals…';
+  const cd = document.getElementById('countdown');
+  if (cd) cd.textContent = '…';
+
+  try {
+    await fetch('/api/signals/refresh', {method:'POST'});
+  } catch(e) {}
+  await loadSignals();
+}
+
+async function paperTrade(ticker, side) {
+  const qty = 1;
+  try {
+    const q = await fetch(`/api/quote/${ticker}`).then(r => r.json());
+    if (q.error) { alert(q.error); return; }
+
+    const total = q.price * qty;
+    const confirmed = confirm(
+      `Paper ${side.toUpperCase()} 1 share of ${ticker} @ $${q.price.toFixed(2)}\n` +
+      `Total: $${total.toFixed(2)}\n\n` +
+      `⚠ This is educational paper trading only — no real money involved.\n\nConfirm?`
+    );
+    if (!confirmed) return;
+
+    const res = await fetch('/api/trade', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({symbol: ticker, qty, side})
+    });
+    const data = await res.json();
+    if (data.ok) {
+      document.getElementById('navBalance').textContent = fmt(data.new_balance);
+      alert(`✓ ${side.toUpperCase()} 1 ${ticker} @ $${data.price.toFixed(2)} | New Balance: $${data.new_balance.toFixed(2)}`);
+    } else {
+      alert('✗ ' + (data.error || 'Order failed'));
+    }
+  } catch(e) {
+    alert('Trade failed: ' + e.message);
+  }
+}
+
+// ── auto-refresh every 1 hour ─────────────────────────────────────────────────
+const REFRESH_INTERVAL = 60 * 60 * 1000; // 1 hour
+let _nextRefreshAt = Date.now() + REFRESH_INTERVAL;
+
+function fmtCountdown(ms) {
+  if (ms <= 0) return 'now';
+  const totalSecs = Math.ceil(ms / 1000);
+  const m = Math.floor(totalSecs / 60);
+  const s = totalSecs % 60;
+  return `${m}m ${s.toString().padStart(2,'0')}s`;
+}
+
+function tickCountdown() {
+  const remaining = _nextRefreshAt - Date.now();
+  const el = document.getElementById('countdown');
+  if (el) el.textContent = fmtCountdown(remaining);
+}
+
+async function autoRefresh() {
+  _nextRefreshAt = Date.now() + REFRESH_INTERVAL;
+  await forceRefresh();
+}
+
+// initial load
+loadSignals();
+
+// countdown ticks every second
+setInterval(tickCountdown, 1000);
+tickCountdown();
+
+// force-regenerate signals every hour
+setInterval(autoRefresh, REFRESH_INTERVAL);
+</script>
+  <script src="/static/js/theme.js"></script>
+</body>
+</html>

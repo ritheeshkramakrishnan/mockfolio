@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flashcards — MockFolio</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="/">Mock<span>Folio</span></a>
+  <div class="nav-links">
+    <a href="/logout" class="btn btn-secondary" style="padding:.4rem .9rem;font-size:.85rem;">Log Out</a>
+  </div>
+</nav>
+
+<div class="app-layout">
+  <aside class="sidebar">
+    <a href="/dashboard"><span class="icon">🏠</span> Dashboard</a>
+    <a href="/trade"><span class="icon">💹</span> Trade</a>
+    <a href="/options"><span class="icon">📊</span> Options</a>
+    <a href="/calls"><span class="icon">📡</span> Market Calls</a>
+    <a href="/signals"><span class="icon">🤖</span> AI Signals</a>
+    <a href="/activity"><span class="icon">📋</span> Activity Log</a>
+    <a href="/learn"><span class="icon">📚</span> AI Tutor</a>
+    <a href="/flashcards" class="active"><span class="icon">🃏</span> Flashcards</a>
+  </aside>
+
+  <main class="main-content">
+    <div class="section-head">
+      <h2>Quant & Trading Flashcards</h2>
+      <p style="color:var(--muted);font-size:.9rem;">Click a card to reveal the answer · Add your own cards · Track your progress</p>
+    </div>
+
+    <!-- Add custom card button -->
+    <div style="display:flex;justify-content:flex-end;margin-bottom:.75rem;">
+      <button class="btn btn-green" style="font-size:.85rem;" onclick="openAddModal()">＋ Add My Own Card</button>
+    </div>
+
+    <!-- category filter -->
+    <div class="fc-category-filter" id="catFilter">
+      <button class="fc-cat-btn active" onclick="filterCat('all', this)">All</button>
+      <button class="fc-cat-btn" onclick="filterCat('Quant Methods', this)">Quant Methods</button>
+      <button class="fc-cat-btn" onclick="filterCat('Risk', this)">Risk</button>
+      <button class="fc-cat-btn" onclick="filterCat('Technical Analysis', this)">Technical Analysis</button>
+      <button class="fc-cat-btn" onclick="filterCat('Statistics', this)">Statistics</button>
+      <button class="fc-cat-btn" onclick="filterCat('Market Structure', this)">Market Structure</button>
+      <button class="fc-cat-btn" onclick="filterCat('Strategies', this)">Strategies</button>
+      <button class="fc-cat-btn" id="myCatBtn" onclick="filterCat('My Cards', this)" style="display:none;">⭐ My Cards</button>
+    </div>
+
+    <!-- progress bar -->
+    <div class="fc-progress" id="fcProgress">Card 1 of 50</div>
+    <div class="fc-progress-bar"><div class="fc-progress-bar-fill" id="fcProgressBar" style="width:0%"></div></div>
+
+    <!-- stats -->
+    <div style="display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;">
+      <div class="stat-card" style="min-width:120px;flex:1;"><div class="label">Known</div><div class="value green" id="countKnown">0</div></div>
+      <div class="stat-card" style="min-width:120px;flex:1;"><div class="label">Still Learning</div><div class="value red" id="countLearning">0</div></div>
+      <div class="stat-card" style="min-width:120px;flex:1;"><div class="label">Remaining</div><div class="value blue" id="countRemaining">0</div></div>
+    </div>
+
+    <!-- card -->
+    <div class="fc-container">
+      <div class="fc-card" id="fcCard" onclick="flipCard()">
+        <div class="fc-front">
+          <div class="category" id="fcCategory">CATEGORY</div>
+          <div class="term" id="fcTerm">Loading…</div>
+          <div style="margin-top:1rem;font-size:.78rem;color:var(--muted);">Click to flip</div>
+        </div>
+        <div class="fc-back">
+          <div class="definition" id="fcDefinition">…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- actions -->
+    <div class="fc-actions" id="fcActions" style="display:none;">
+      <button class="btn btn-red" onclick="markCard(0)">✗ Still Learning</button>
+      <button class="btn btn-green" onclick="markCard(1)">✓ Got It!</button>
+    </div>
+
+    <div class="fc-nav">
+      <button class="btn btn-secondary" onclick="prevCard()">← Prev</button>
+      <span style="color:var(--muted);font-size:.85rem;" id="navLabel">—</span>
+      <button class="btn btn-secondary" onclick="nextCard()">Next →</button>
+    </div>
+    <div style="text-align:center;margin-top:1rem;">
+      <button class="btn btn-ghost" style="font-size:.85rem;" onclick="shuffleCards()">🔀 Shuffle</button>
+      <button class="btn btn-ghost" style="font-size:.85rem;margin-left:.5rem;" onclick="resetProgress()">↺ Reset Progress</button>
+    </div>
+
+    <!-- My Custom Cards list (shown when "My Cards" filter active) -->
+    <div id="customCardsPanel" style="display:none;margin-top:2rem;">
+      <h3 style="font-size:.95rem;font-weight:700;margin-bottom:1rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">⭐ My Custom Cards</h3>
+      <div id="customCardsList"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Add/Edit Card Modal -->
+<div id="cardModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:none;align-items:center;justify-content:center;">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:2rem;width:100%;max-width:480px;margin:1rem;">
+    <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:1.25rem;" id="modalTitle">Add Custom Flashcard</h3>
+    <input type="hidden" id="editCardId" value=""/>
+    <div class="form-group">
+      <label style="font-size:.83rem;color:var(--muted);">Term / Concept</label>
+      <input class="input" id="cardTerm" placeholder="e.g. Gamma Squeeze" style="width:100%;"/>
+    </div>
+    <div class="form-group">
+      <label style="font-size:.83rem;color:var(--muted);">Definition (shown on back of card)</label>
+      <textarea class="input" id="cardDef" rows="4" placeholder="Write your definition here..." style="width:100%;resize:vertical;"></textarea>
+    </div>
+    <div class="form-group">
+      <label style="font-size:.83rem;color:var(--muted);">Category</label>
+      <input class="input" id="cardCat" placeholder="e.g. Options, My Notes" value="My Cards" style="width:100%;"/>
+    </div>
+    <div style="display:flex;gap:.75rem;margin-top:1.25rem;">
+      <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="saveCard()">Save Card</button>
+      <button class="btn btn-secondary" style="justify-content:center;" onclick="closeModal()">Cancel</button>
+    </div>
+    <div id="modalMsg" style="margin-top:.75rem;font-size:.83rem;text-align:center;"></div>
+  </div>
+</div>
+
+<script>
+const CARDS = [
+  // ── Quant Methods ──────────────────────────────────────
+  {id:'mc',cat:'Quant Methods',term:'Monte Carlo Simulation',def:'A technique that runs thousands of random scenarios (using historical μ and σ) to model the probability distribution of future asset prices or portfolio returns. Formula: P(t+1) = P(t) × (1 + N(μ,σ)).'},
+  {id:'sharpe',cat:'Quant Methods',term:'Sharpe Ratio',def:'(Rp − Rf) / σp. Measures excess return per unit of risk. Sharpe > 1 is good, > 2 is excellent. Used to compare risk-adjusted performance across strategies.'},
+  {id:'sortino',cat:'Quant Methods',term:'Sortino Ratio',def:'Like Sharpe but penalises only downside volatility. (Rp − Rf) / σ_downside. Better for asymmetric return strategies where upside variance is desired.'},
+  {id:'calmar',cat:'Quant Methods',term:'Calmar Ratio',def:'Annualised Return / Maximum Drawdown. Measures return relative to worst peak-to-trough loss. Used heavily in CTA and systematic fund evaluation.'},
+  {id:'kelly',cat:'Quant Methods',term:'Kelly Criterion',def:'f* = (b·p − q) / b. Optimal fraction of capital to bet per trade to maximise long-run wealth growth. Most traders use Half-Kelly (f*/2) to reduce variance.'},
+  {id:'omega',cat:'Quant Methods',term:'Omega Ratio',def:'∫(threshold→∞) [1−F(r)] dr / ∫(−∞→threshold) F(r) dr. Probability-weighted ratio of gains to losses above/below a threshold. Considers full return distribution, not just mean/std.'},
+  {id:'expectancy',cat:'Quant Methods',term:'Expectancy',def:'(Win Rate × Avg Win) − (Loss Rate × Avg Loss). Tells you the expected profit per dollar risked per trade. Positive expectancy is required for a viable strategy.'},
+  {id:'rolling',cat:'Quant Methods',term:'Rolling Window',def:'Calculating a statistic (e.g. 20-day volatility or mean) using a fixed-length window that moves forward in time. Essential for adaptive strategies.'},
+  {id:'zscore',cat:'Quant Methods',term:'Z-Score',def:'(x − μ) / σ. Measures how many standard deviations a value is from the mean. Used in mean-reversion strategies: extreme Z-scores signal potential reversals.'},
+  {id:'pca',cat:'Quant Methods',term:'PCA (Factor Analysis)',def:'Principal Component Analysis decomposes portfolio returns into uncorrelated factors. Used to identify hidden risk exposures and build factor-neutral strategies.'},
+
+  // ── Risk ──────────────────────────────────────────────
+  {id:'var',cat:'Risk',term:'Value at Risk (VaR)',def:'Maximum expected loss at a given confidence level over a time horizon. E.g. 95% 1-day VaR of $1,000 means 95% chance of losing no more than $1,000 in a day. Parametric: Portfolio × σ × Z.'},
+  {id:'cvar',cat:'Risk',term:'CVaR / Expected Shortfall',def:'The expected loss given that VaR is exceeded. CVaR = average of losses in the worst (1−CI)% of scenarios. More conservative and complete than VaR alone.'},
+  {id:'drawdown',cat:'Risk',term:'Maximum Drawdown',def:'The largest peak-to-trough decline in portfolio value. Key metric for assessing downside risk and strategy robustness. Funded traders typically have hard drawdown limits.'},
+  {id:'possize',cat:'Risk',term:'Position Sizing',def:'Determining how many shares/contracts to trade based on risk per trade. Common rule: risk 1−2% of account per trade. Position = (Account Risk $) / (Stop Loss Distance × Tick Value).'},
+  {id:'stoploss',cat:'Risk',term:'Stop-Loss',def:'A pre-set order to exit a position if price moves against you by a defined amount. Limits losses. ATR-based stops use Average True Range to adapt to volatility.'},
+  {id:'rr',cat:'Risk',term:'Risk/Reward Ratio',def:'Expected profit / Expected loss per trade. E.g. 2:1 means targeting $200 profit while risking $100. Minimum 1.5:1 recommended for a viable strategy.'},
+  {id:'beta',cat:'Risk',term:'Beta',def:'Measures a stock\'s sensitivity to market movements. Beta > 1 = more volatile than market. Beta < 1 = less volatile. Beta of 0 = uncorrelated. Used to measure systematic risk.'},
+  {id:'corr',cat:'Risk',term:'Correlation',def:'Ranges from −1 to +1. Measures how two assets move together. Diversification requires low or negative correlation. High correlation = concentrated risk.'},
+  {id:'leverage',cat:'Risk',term:'Leverage',def:'Using borrowed capital to amplify position size. 2:1 leverage means $50k controls $100k. Amplifies both gains AND losses. Risk of ruin increases non-linearly with leverage.'},
+  {id:'margin',cat:'Risk',term:'Margin',def:'The collateral required to open and maintain a leveraged position. Initial margin = deposit required to open. Maintenance margin = minimum to keep position. Margin call = forced close.'},
+
+  // ── Technical Analysis ────────────────────────────────
+  {id:'rsi',cat:'Technical Analysis',term:'RSI (Relative Strength Index)',def:'Momentum oscillator 0–100. RSI < 30 = oversold (potential buy), RSI > 70 = overbought (potential sell). Based on average gains vs losses over 14 periods. RSI divergence often precedes reversals.'},
+  {id:'macd',cat:'Technical Analysis',term:'MACD',def:'Moving Average Convergence Divergence = 12-EMA − 26-EMA. Signal line = 9-EMA of MACD. Histogram = MACD − Signal. Crossovers signal trend changes. Divergence signals weakness.'},
+  {id:'bb',cat:'Technical Analysis',term:'Bollinger Bands',def:'Price envelope = 20-SMA ± 2σ. Price touching upper band = overbought. Lower band = oversold. Band squeeze (low σ) precedes big moves. Used for mean reversion and breakout strategies.'},
+  {id:'ema',cat:'Technical Analysis',term:'EMA (Exponential Moving Average)',def:'Weighted moving average giving more weight to recent prices. Reacts faster to price changes than SMA. Common periods: 9, 21, 50, 200. EMA crossovers (e.g. golden cross) signal trends.'},
+  {id:'vol',cat:'Technical Analysis',term:'Volume',def:'Number of shares/contracts traded. Confirms price moves: breakout on high volume = genuine. Low volume moves may be false. On-Balance Volume (OBV) accumulates volume directionally.'},
+  {id:'sr',cat:'Technical Analysis',term:'Support & Resistance',def:'Price levels where buying (support) or selling (resistance) pressure has historically concentrated. Breaks of these levels can signal strong directional moves. Round numbers often act as psychological levels.'},
+  {id:'atr',cat:'Technical Analysis',term:'ATR (Average True Range)',def:'Measures market volatility — the average of daily high−low ranges over N periods (typically 14). Used for stop placement, position sizing, and identifying breakout conditions.'},
+  {id:'fib',cat:'Technical Analysis',term:'Fibonacci Retracements',def:'Key levels at 23.6%, 38.2%, 50%, 61.8%, 78.6% of a prior move. Used to identify potential pullback entry points within a trend. Derived from the Fibonacci sequence.'},
+  {id:'vwap',cat:'Technical Analysis',term:'VWAP',def:'Volume-Weighted Average Price — intraday benchmark. Institutions buy below VWAP (value), sell above. Price reclaiming VWAP = bullish. Breaking below = bearish. Reset daily.'},
+  {id:'obos',cat:'Technical Analysis',term:'Overbought / Oversold',def:'Conditions where price has moved too far, too fast relative to historical norms. Measured by oscillators (RSI, Stochastic). Does NOT guarantee reversal — trending markets can stay extended.'},
+
+  // ── Statistics ────────────────────────────────────────
+  {id:'std',cat:'Statistics',term:'Standard Deviation (σ)',def:'Measures dispersion of returns around their mean. σ = √[Σ(x−μ)²/N]. Annualise daily σ by multiplying by √252. Central to almost every risk metric.'},
+  {id:'skew',cat:'Statistics',term:'Skewness',def:'Asymmetry of return distribution. Positive skew = more extreme positive returns. Negative skew = fat left tail (ruin risk). Trend-following has positive skew; options-selling has negative skew.'},
+  {id:'kurt',cat:'Statistics',term:'Kurtosis',def:'Fat-tailedness of distribution. Normal distribution has kurtosis 3. Excess kurtosis > 0 means more extreme events than normal (leptokurtic). Financial returns typically have excess kurtosis.'},
+  {id:'clt',cat:'Statistics',term:'Central Limit Theorem',def:'The mean of a large number of independent random variables approaches a normal distribution, regardless of the original distribution. Underlies parametric VaR and many option pricing models.'},
+  {id:'autocorr',cat:'Statistics',term:'Autocorrelation',def:'Correlation of a time series with its own past values. Significant autocorrelation suggests price predictability. Used to detect mean-reversion (negative autocorr) or momentum (positive autocorr).'},
+  {id:'regression',cat:'Statistics',term:'Linear Regression',def:'Models relationship between variables: y = α + β·x + ε. In finance: alpha (α) = excess return, beta (β) = market sensitivity, residuals = idiosyncratic risk. Ordinary Least Squares minimises squared residuals.'},
+  {id:'cointegration',cat:'Statistics',term:'Cointegration',def:'Two non-stationary time series that share a long-run equilibrium. Used in pairs trading: if two correlated stocks diverge, bet on reversion to their historical spread (mean-reverting residual).'},
+  {id:'halflife',cat:'Statistics',term:'Mean Reversion Half-Life',def:'Time for a mean-reverting process to reduce its deviation from mean by half. Estimated by fitting an AR(1) model: half-life = −ln(2)/ln(β). Guides entry/exit timing in pairs and stat arb strategies.'},
+
+  // ── Market Structure ──────────────────────────────────
+  {id:'bidask',cat:'Market Structure',term:'Bid-Ask Spread',def:'Difference between highest buy price (bid) and lowest sell price (ask). Represents the market-maker\'s profit. Tight spreads = liquid market. Wide spreads = illiquid. Transaction cost for market orders.'},
+  {id:'depth',cat:'Market Structure',term:'Order Book Depth',def:'The collection of outstanding buy (bid) and sell (ask) limit orders at each price level. Large orders ("walls") at key levels indicate strong support/resistance. Thinning depth signals potential fast moves.'},
+  {id:'slippage',cat:'Market Structure',term:'Slippage',def:'Difference between expected execution price and actual fill price. Caused by market impact and low liquidity. Large orders in thin markets suffer more slippage. Critical factor in backtesting realism.'},
+  {id:'marketmaker',cat:'Market Structure',term:'Market Maker',def:'Firm or individual providing liquidity by continuously quoting bid and ask prices. Earns the spread, hedges delta. Stabilises markets. Often have informational advantages about order flow.'},
+  {id:'darkpool',cat:'Market Structure',term:'Dark Pool',def:'Private exchange for large institutional trades, not visible to public order books before execution. Used to avoid market impact. Prints appear on tape post-execution, sometimes revealing institutional accumulation.'},
+
+  // ── Strategies ────────────────────────────────────────
+  {id:'momstrat',cat:'Strategies',term:'Momentum Strategy',def:'Buy assets that have performed well and sell those that have performed poorly over a past period (typically 3–12 months). Exploits trend-following behaviour. Works across asset classes. Drawback: momentum crashes.'},
+  {id:'meanrev',cat:'Strategies',term:'Mean Reversion',def:'Bet that extreme deviations from a long-run average will revert. Works in range-bound markets. Buy dips, sell rips. Tools: Z-score, Bollinger Bands. Pairs trading is a form of mean reversion.'},
+  {id:'strarb',cat:'Strategies',term:'Statistical Arbitrage',def:'Exploiting temporary mispricings between correlated assets using statistical models. Pairs trading is the simplest form. More complex: factor-neutral baskets, index arb, convertible arb.'},
+  {id:'trendfol',cat:'Strategies',term:'Trend Following',def:'Hold positions in the direction of a defined trend until the trend breaks. Uses moving averages, breakouts, or price channels to define trend. Classic hedge fund strategy (CTAs/managed futures).'},
+  {id:'breakout',cat:'Strategies',term:'Breakout Strategy',def:'Enter a trade when price breaks through a key support/resistance level with strong volume. First target: distance from the range projected from breakout point. Stop: re-entry into the range.'},
+  {id:'scalping',cat:'Strategies',term:'Scalping',def:'Very short-term strategy: capturing small price moves many times per day. Requires low bid-ask spreads, fast execution, and high win rate. P&L depends heavily on transaction costs.'},
+];
+
+let filtered = [...CARDS];
+let currentIdx = 0;
+let progress = {};
+let isFlipped = false;
+
+async function loadProgress() {
+  const res = await fetch('/api/flashcard/progress').then(r=>r.json());
+  progress = res;
+  renderCard();
+  updateStats();
+}
+
+function filterCat(cat, btn) {
+  currentCat = cat;
+  document.querySelectorAll('.fc-cat-btn').forEach(b=>b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  filtered = cat === 'all' ? [...CARDS] : CARDS.filter(c=>c.cat===cat);
+  currentIdx = 0;
+  renderCard();
+  updateStats();
+  // Show custom cards management panel only for "My Cards"
+  document.getElementById('customCardsPanel').style.display = (cat === 'My Cards') ? 'block' : 'none';
+}
+
+function renderCard() {
+  if (!filtered.length) return;
+  const card = filtered[currentIdx];
+  document.getElementById('fcCategory').textContent = card.cat.toUpperCase();
+  document.getElementById('fcTerm').textContent = card.term;
+  document.getElementById('fcDefinition').textContent = card.def;
+  document.getElementById('fcProgress').textContent = `Card ${currentIdx+1} of ${filtered.length}`;
+  document.getElementById('fcProgressBar').style.width = `${((currentIdx+1)/filtered.length)*100}%`;
+  document.getElementById('navLabel').textContent = `${currentIdx+1} / ${filtered.length}`;
+
+  // reset flip
+  const el = document.getElementById('fcCard');
+  el.classList.remove('flipped');
+  isFlipped = false;
+  document.getElementById('fcActions').style.display = 'none';
+}
+
+function flipCard() {
+  const el = document.getElementById('fcCard');
+  el.classList.toggle('flipped');
+  isFlipped = !isFlipped;
+  document.getElementById('fcActions').style.display = isFlipped ? 'flex' : 'none';
+}
+
+function nextCard() {
+  currentIdx = (currentIdx + 1) % filtered.length;
+  renderCard();
+}
+
+function prevCard() {
+  currentIdx = (currentIdx - 1 + filtered.length) % filtered.length;
+  renderCard();
+}
+
+function shuffleCards() {
+  for (let i = filtered.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [filtered[i], filtered[j]] = [filtered[j], filtered[i]];
+  }
+  currentIdx = 0;
+  renderCard();
+}
+
+async function markCard(known) {
+  const card = filtered[currentIdx];
+  progress[card.id] = { known, seen: (progress[card.id]?.seen || 0) + 1 };
+  await fetch('/api/flashcard/progress', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({card_id: card.id, known})
+  });
+  updateStats();
+  nextCard();
+}
+
+function updateStats() {
+  const known = Object.values(progress).filter(p=>p.known===1).length;
+  const seen = Object.values(progress).length;
+  document.getElementById('countKnown').textContent = known;
+  document.getElementById('countLearning').textContent = seen - known;
+  document.getElementById('countRemaining').textContent = CARDS.length - seen;
+}
+
+function resetProgress() {
+  if (!confirm('Reset all flashcard progress?')) return;
+  progress = {};
+  updateStats();
+}
+
+loadProgress();
+loadCustomCards();
+
+// ── Custom card logic ─────────────────────────────────────────────────
+let customCards = [];
+
+async function loadCustomCards() {
+  try {
+    customCards = await fetch('/api/flashcard/custom').then(r => r.json());
+    if (customCards.length > 0) {
+      document.getElementById('myCatBtn').style.display = 'inline-block';
+    }
+    // Merge custom cards into CARDS array with prefix
+    customCards.forEach(c => {
+      const id = 'custom_' + c.id;
+      if (!CARDS.find(x => x.id === id)) {
+        CARDS.push({id, cat: c.category || 'My Cards', term: c.term, def: c.definition});
+      }
+    });
+    renderCustomCardsList();
+  } catch(e) {}
+}
+
+function renderCustomCardsList() {
+  const el = document.getElementById('customCardsList');
+  if (!customCards.length) {
+    el.innerHTML = '<p style="color:var(--muted);text-align:center;padding:1.5rem;">No custom cards yet. Add your first one!</p>';
+    return;
+  }
+  el.innerHTML = customCards.map(c => `
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.25rem;margin-bottom:.75rem;display:flex;align-items:flex-start;gap:1rem;">
+      <div style="flex:1;">
+        <div style="font-size:.72rem;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.2rem;">${c.category}</div>
+        <div style="font-weight:700;color:var(--cream);margin-bottom:.25rem;">${c.term}</div>
+        <div style="font-size:.85rem;color:var(--muted);line-height:1.5;">${c.definition}</div>
+      </div>
+      <div style="display:flex;gap:.4rem;flex-shrink:0;">
+        <button class="btn btn-secondary" style="font-size:.75rem;padding:.25rem .6rem;" onclick="openEditModal(${c.id},'${c.term.replace(/'/g,"\\'")}','${c.definition.replace(/'/g,"\\'")}','${(c.category||'My Cards').replace(/'/g,"\\'")}')">Edit</button>
+        <button class="btn" style="font-size:.75rem;padding:.25rem .6rem;border:1px solid var(--red);color:var(--red);" onclick="deleteCard(${c.id})">Delete</button>
+      </div>
+    </div>`).join('');
+}
+
+function openAddModal() {
+  document.getElementById('modalTitle').textContent = 'Add Custom Flashcard';
+  document.getElementById('editCardId').value = '';
+  document.getElementById('cardTerm').value = '';
+  document.getElementById('cardDef').value = '';
+  document.getElementById('cardCat').value = 'My Cards';
+  document.getElementById('modalMsg').textContent = '';
+  document.getElementById('cardModal').style.display = 'flex';
+}
+
+function openEditModal(id, term, def, cat) {
+  document.getElementById('modalTitle').textContent = 'Edit Flashcard';
+  document.getElementById('editCardId').value = id;
+  document.getElementById('cardTerm').value = term;
+  document.getElementById('cardDef').value = def;
+  document.getElementById('cardCat').value = cat;
+  document.getElementById('modalMsg').textContent = '';
+  document.getElementById('cardModal').style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('cardModal').style.display = 'none';
+}
+
+async function saveCard() {
+  const id = document.getElementById('editCardId').value;
+  const term = document.getElementById('cardTerm').value.trim();
+  const def = document.getElementById('cardDef').value.trim();
+  const cat = document.getElementById('cardCat').value.trim() || 'My Cards';
+  const msgEl = document.getElementById('modalMsg');
+  if (!term || !def) { msgEl.style.color = 'var(--red)'; msgEl.textContent = 'Term and definition are required.'; return; }
+
+  const url = id ? `/api/flashcard/custom/${id}` : '/api/flashcard/custom';
+  const method = id ? 'PUT' : 'POST';
+  const res = await fetch(url, {method, headers:{'Content-Type':'application/json'}, body: JSON.stringify({term, definition: def, category: cat})});
+  const data = await res.json();
+  if (data.ok || data.card) {
+    closeModal();
+    customCards = [];
+    // remove stale custom cards from CARDS
+    CARDS.splice(0, CARDS.length, ...CARDS.filter(c => !c.id.startsWith('custom_')));
+    await loadCustomCards();
+    filterCat(currentCat, document.querySelector('.fc-cat-btn.active'));
+  } else {
+    msgEl.style.color = 'var(--red)'; msgEl.textContent = data.error || 'Save failed';
+  }
+}
+
+async function deleteCard(id) {
+  if (!confirm('Delete this card?')) return;
+  await fetch(`/api/flashcard/custom/${id}`, {method:'DELETE'});
+  customCards = [];
+  CARDS.splice(0, CARDS.length, ...CARDS.filter(c => !c.id.startsWith('custom_')));
+  await loadCustomCards();
+  filterCat(currentCat, document.querySelector('.fc-cat-btn.active'));
+}
+
+// Close modal on backdrop click
+document.getElementById('cardModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+let currentCat = 'all';
+const origFilterCat = filterCat;
+</script>
+  <script src="/static/js/theme.js"></script>
+</body>
+</html>

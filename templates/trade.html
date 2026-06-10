@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trade — MockFolio</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <style>
+    .tv-wrapper { position:relative;width:100%;height:520px;border-radius:14px;overflow:hidden;border:1px solid var(--border); }
+    .trade-layout { display:grid;grid-template-columns:1fr 300px;gap:1.5rem;align-items:start;margin-top:1.5rem; }
+    .symbol-bar { display:flex;gap:.75rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap; }
+    .symbol-chips { display:flex;gap:.4rem;flex-wrap:wrap; }
+    .chip { font-size:.75rem;padding:.25rem .65rem;border-radius:6px;border:1px solid var(--border);color:var(--muted);cursor:pointer;transition:all .15s;background:var(--surface); }
+    .chip:hover,.chip.active { border-color:var(--accent);color:var(--accent);background:rgba(34,197,94,.08); }
+    .style-bar { display:flex;gap:.35rem;align-items:center;margin-bottom:.6rem;flex-wrap:wrap; }
+    .style-btn { font-size:.75rem;padding:.28rem .7rem;border-radius:6px;border:1px solid var(--border);color:var(--muted);cursor:pointer;background:var(--surface);transition:all .15s;display:flex;align-items:center;gap:.3rem; }
+    .style-btn:hover,.style-btn.active { border-color:var(--accent);color:var(--accent);background:rgba(34,197,94,.08); }
+    .style-label { font-size:.72rem;color:var(--muted);margin-right:.2rem;font-weight:600; }
+    .interval-btn { font-size:.72rem;padding:.25rem .55rem;border-radius:5px;border:1px solid var(--border);color:var(--muted);cursor:pointer;background:var(--surface);transition:all .15s; }
+    .interval-btn:hover,.interval-btn.active { border-color:rgba(34,197,94,.5);color:var(--accent);background:rgba(34,197,94,.06); }
+  </style>
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="/">Mock<span>Folio</span></a>
+  <div class="nav-links">
+    <span id="navBalance" style="color:var(--accent);font-weight:700;font-size:.9rem;"></span>
+    <a href="/logout" class="btn btn-secondary" style="padding:.4rem .9rem;font-size:.85rem;">Log Out</a>
+  </div>
+</nav>
+<div class="app-layout">
+  <aside class="sidebar">
+    <a href="/dashboard"><span class="icon">🏠</span> Dashboard</a>
+    <a href="/trade" class="active"><span class="icon">💹</span> Trade</a>
+    <a href="/options"><span class="icon">📊</span> Options</a>
+    <a href="/calls"><span class="icon">📡</span> Market Calls</a>
+    <a href="/signals"><span class="icon">🤖</span> AI Signals</a>
+    <a href="/activity"><span class="icon">📋</span> Activity Log</a>
+    <a href="/learn"><span class="icon">📚</span> AI Tutor</a>
+    <a href="/flashcards"><span class="icon">🃏</span> Flashcards</a>
+  </aside>
+  <main class="main-content">
+    <div class="section-head">
+      <h2>Paper Trading Desk</h2>
+      <p style="color:var(--muted);font-size:.9rem;">TradingView charts · Draw patterns · Indicators · Zero real money</p>
+    </div>
+    <div class="symbol-bar">
+      <input class="input" id="symbolInput" placeholder="Symbol (e.g. AAPL)" style="max-width:180px;" />
+      <button class="btn btn-primary" onclick="loadSymbol()">Load</button>
+      <div class="symbol-chips">
+        <span class="chip active" onclick="quickLoad('AAPL')">AAPL</span>
+        <span class="chip" onclick="quickLoad('TSLA')">TSLA</span>
+        <span class="chip" onclick="quickLoad('NVDA')">NVDA</span>
+        <span class="chip" onclick="quickLoad('SPY')">SPY</span>
+        <span class="chip" onclick="quickLoad('QQQ')">QQQ</span>
+        <span class="chip" onclick="quickLoad('MSFT')">MSFT</span>
+        <span class="chip" onclick="quickLoad('META')">META</span>
+        <span class="chip" onclick="quickLoad('AMZN')">AMZN</span>
+        <span class="chip" onclick="quickLoad('GOOGL')">GOOGL</span>
+        <span class="chip" onclick="quickLoad('BTCUSD')">BTC</span>
+      </div>
+    </div>
+    <!-- Chart style + interval controls -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.65rem 1rem;margin-bottom:.6rem;">
+      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:.35rem;">
+          <span class="style-label">STYLE</span>
+          <button class="style-btn active" onclick="setStyle('1',this)" title="Candlestick">🕯 Candles</button>
+          <button class="style-btn" onclick="setStyle('0',this)" title="Bars">📊 Bars</button>
+          <button class="style-btn" onclick="setStyle('8',this)" title="Heikin-Ashi">🔸 Heikin-Ashi</button>
+          <button class="style-btn" onclick="setStyle('2',this)" title="Line">📈 Line</button>
+          <button class="style-btn" onclick="setStyle('3',this)" title="Area">🌊 Area</button>
+          <button class="style-btn" onclick="setStyle('5',this)" title="Hollow Candles">⬜ Hollow</button>
+          <button class="style-btn" onclick="setStyle('6',this)" title="Baseline">〰 Baseline</button>
+        </div>
+        <div style="width:1px;height:20px;background:var(--border);"></div>
+        <div style="display:flex;align-items:center;gap:.35rem;">
+          <span class="style-label">INTERVAL</span>
+          <button class="interval-btn" onclick="setInterval_('1',this)">1m</button>
+          <button class="interval-btn" onclick="setInterval_('5',this)">5m</button>
+          <button class="interval-btn" onclick="setInterval_('15',this)">15m</button>
+          <button class="interval-btn" onclick="setInterval_('60',this)">1H</button>
+          <button class="interval-btn" onclick="setInterval_('240',this)">4H</button>
+          <button class="interval-btn active" onclick="setInterval_('D',this)">1D</button>
+          <button class="interval-btn" onclick="setInterval_('W',this)">1W</button>
+          <button class="interval-btn" onclick="setInterval_('M',this)">1M</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tv-wrapper">
+      <div class="tradingview-widget-container" style="height:100%;width:100%;">
+        <div id="tradingview_chart" style="height:100%;width:100%;"></div>
+      </div>
+    </div>
+    <div style="font-size:.72rem;color:var(--muted);margin:.4rem 0 .5rem;">
+      📐 Drawing toolbar: trend lines, Fibonacci, channels, H&amp;S patterns, wedges and more. Right-click any drawing to edit or delete.
+    </div>
+    <div class="trade-layout">
+      <div class="card" style="padding:1.5rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+          <h3 style="font-size:1rem;font-weight:700;">Open Positions</h3>
+          <button class="btn btn-secondary" style="font-size:.8rem;padding:.35rem .8rem;" onclick="loadPositions()">Refresh</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Symbol</th><th>Qty</th><th>Avg Cost</th><th>Current</th><th>Unreal. P&amp;L</th><th>Market Val</th></tr></thead>
+            <tbody id="posTbody"><tr><td colspan="6" style="color:var(--muted);text-align:center;">No open positions</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="trade-panel">
+        <h3 style="font-size:1rem;font-weight:700;margin-bottom:.5rem;">Place Order</h3>
+        <div style="font-size:.78rem;color:var(--muted);margin-bottom:1rem;" id="currentPriceDisplay">Loading price…</div>
+        <div class="trade-tabs">
+          <button class="trade-tab active buy" id="buyTab" onclick="setTab('buy')">BUY</button>
+          <button class="trade-tab sell" id="sellTab" onclick="setTab('sell')">SELL</button>
+        </div>
+        <div class="form-group"><label>Symbol</label><input class="input" id="tradeSymbol" placeholder="AAPL" /></div>
+        <div class="form-group"><label>Quantity (Shares)</label><input class="input" type="number" id="tradeQty" placeholder="1" min="0.001" step="0.001" /></div>
+        <div id="orderPreview" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;margin:1rem 0;font-size:.88rem;display:none;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:.4rem;"><span style="color:var(--muted);">Est. Price</span><span id="estPrice">—</span></div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:.4rem;"><span style="color:var(--muted);">Est. Total</span><span id="estTotal">—</span></div>
+          <div style="display:flex;justify-content:space-between;"><span style="color:var(--muted);">Balance After</span><span id="estBalance">—</span></div>
+        </div>
+        <button class="btn btn-green w-full" style="justify-content:center;margin-bottom:.5rem;" onclick="previewOrder()">Preview Order</button>
+        <button class="btn btn-primary w-full" id="submitBtn" style="justify-content:center;display:none;" onclick="submitOrder()">Confirm Order ✓</button>
+        <div id="tradeMsg" style="margin-top:.75rem;font-size:.85rem;text-align:center;"></div>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="https://s3.tradingview.com/tv.js"></script>
+<script>
+let currentSide='buy',currentBalance=0,currentSymbol='AAPL',tvWidget=null;
+let currentStyle='1', currentInterval='D';
+const fmt=n=>'$'+parseFloat(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtPnl=n=>{const v=parseFloat(n);return(v>=0?'+':'')+fmt(v);};
+
+function buildTVSymbol(sym){
+  const map={'SPY':'AMEX:SPY','QQQ':'NASDAQ:QQQ','TLT':'NASDAQ:TLT','GLD':'AMEX:GLD',
+             'IWM':'AMEX:IWM','DIA':'AMEX:DIA','BTCUSD':'BITSTAMP:BTCUSD',
+             'ETHUSD':'BITSTAMP:ETHUSD','VXX':'CBOE:VIX'};
+  return map[sym.toUpperCase()]||('NASDAQ:'+sym.toUpperCase());
+}
+
+function setStyle(style, btn) {
+  currentStyle = style;
+  document.querySelectorAll('.style-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  createChart(currentSymbol);
+}
+
+function setInterval_(interval, btn) {
+  currentInterval = interval;
+  document.querySelectorAll('.interval-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  createChart(currentSymbol);
+}
+
+function createChart(sym){
+  if(tvWidget){try{tvWidget.remove();}catch(e){}}
+  document.getElementById('tradingview_chart').innerHTML='';
+  tvWidget=new TradingView.widget({
+    container_id:"tradingview_chart",autosize:true,
+    symbol:buildTVSymbol(sym),interval:currentInterval,
+    timezone:"America/New_York",theme:"dark",style:currentStyle,locale:"en",
+    toolbar_bg:"#0c110a",enable_publishing:false,allow_symbol_change:true,
+    watchlist:["NASDAQ:AAPL","NASDAQ:TSLA","NASDAQ:NVDA","AMEX:SPY","NASDAQ:QQQ",
+               "NASDAQ:MSFT","NASDAQ:META","NASDAQ:AMZN","NASDAQ:GOOGL"],
+    details:true,hotlist:false,calendar:false,
+    studies:["RSI@tv-basicstudies","MACD@tv-basicstudies","BB@tv-basicstudies"],
+    show_popup_button:true,popup_width:"1000",popup_height:"650",
+    overrides:{
+      "paneProperties.background":"#060a04",
+      "paneProperties.backgroundType":"solid",
+      "paneProperties.vertGridProperties.color":"#1c2e17",
+      "paneProperties.horzGridProperties.color":"#1c2e17",
+      "scalesProperties.textColor":"#7a8f6e",
+      "scalesProperties.lineColor":"#1c2e17",
+      "mainSeriesProperties.candleStyle.upColor":"#22c55e",
+      "mainSeriesProperties.candleStyle.downColor":"#f87171",
+      "mainSeriesProperties.candleStyle.borderUpColor":"#22c55e",
+      "mainSeriesProperties.candleStyle.borderDownColor":"#f87171",
+      "mainSeriesProperties.candleStyle.wickUpColor":"#22c55e",
+      "mainSeriesProperties.candleStyle.wickDownColor":"#f87171",
+    }
+  });
+}
+
+async function loadSymbol(){
+  const sym=document.getElementById('symbolInput').value.trim().toUpperCase()||'AAPL';
+  currentSymbol=sym;
+  document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('active',c.textContent===sym));
+  createChart(sym);
+  document.getElementById('tradeSymbol').value=sym;
+  await refreshPrice(sym);
+}
+function quickLoad(sym){document.getElementById('symbolInput').value=sym;loadSymbol();}
+
+async function refreshPrice(sym){
+  try{
+    const q=await fetch('/api/quote/'+sym).then(r=>r.json());
+    if(!q.error){
+      const src=q.source?.includes('live')?'<span style="color:#22c55e;font-size:.7rem;">● LIVE</span>':
+                q.source?.includes('EOD')?'<span style="color:#f59e0b;font-size:.7rem;">◐ EOD</span>':
+                '<span style="color:#64748b;font-size:.7rem;">~ Sim</span>';
+      document.getElementById('currentPriceDisplay').innerHTML=
+        '<b style="color:var(--accent);font-size:1.1rem;">'+fmt(q.price)+'</b> '+sym+' '+src;
+    }
+  }catch(e){}
+}
+
+function setTab(side){
+  currentSide=side;
+  document.getElementById('buyTab').className='trade-tab'+(side==='buy'?' active buy':'');
+  document.getElementById('sellTab').className='trade-tab'+(side==='sell'?' active sell':'');
+  document.getElementById('submitBtn').style.display='none';
+  document.getElementById('orderPreview').style.display='none';
+}
+
+async function previewOrder(){
+  const sym=document.getElementById('tradeSymbol').value.trim().toUpperCase();
+  const qty=parseFloat(document.getElementById('tradeQty').value);
+  if(!sym||!qty||qty<=0){alert('Enter a valid symbol and quantity.');return;}
+  const q=await fetch('/api/quote/'+sym).then(r=>r.json());
+  if(q.error){alert(q.error);return;}
+  const total=q.price*qty;
+  document.getElementById('estPrice').textContent=fmt(q.price);
+  document.getElementById('estTotal').textContent=fmt(total);
+  document.getElementById('estBalance').textContent=fmt(currentBalance-(currentSide==='buy'?total:-total));
+  document.getElementById('orderPreview').style.display='block';
+  document.getElementById('submitBtn').style.display='block';
+}
+
+async function submitOrder(){
+  const sym=document.getElementById('tradeSymbol').value.trim().toUpperCase();
+  const qty=parseFloat(document.getElementById('tradeQty').value);
+  const msgEl=document.getElementById('tradeMsg');
+  const res=await fetch('/api/trade',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({symbol:sym,qty,side:currentSide})});
+  const data=await res.json();
+  if(data.ok){
+    currentBalance=data.new_balance;
+    document.getElementById('navBalance').textContent=fmt(data.new_balance);
+    msgEl.style.color='var(--green)';
+    msgEl.textContent='✓ '+currentSide.toUpperCase()+' '+qty+' '+sym+' @ '+fmt(data.price)+
+      ' · New Balance: '+fmt(data.new_balance)+(currentSide==='sell'?' · P&L: '+fmtPnl(data.pnl):'');
+    document.getElementById('submitBtn').style.display='none';
+    document.getElementById('orderPreview').style.display='none';
+    loadPositions();
+  }else{
+    msgEl.style.color='var(--red)';
+    msgEl.textContent='✗ '+(data.error||'Order failed');
+  }
+}
+
+async function loadPositions(){
+  const positions=await fetch('/api/positions').then(r=>r.json());
+  const tbody=document.getElementById('posTbody');
+  if(!positions.length){
+    tbody.innerHTML='<tr><td colspan="6" style="color:var(--muted);text-align:center;">No open positions</td></tr>';
+    return;
+  }
+  tbody.innerHTML=positions.map(p=>`
+    <tr>
+      <td><b style="color:var(--accent);cursor:pointer;" onclick="quickLoad('${p.symbol}')">${p.symbol}</b></td>
+      <td>${p.qty}</td><td>${fmt(p.avg_price)}</td><td>${fmt(p.current_price)}</td>
+      <td class="${p.unrealized_pnl>=0?'text-green':'text-red'}">${fmtPnl(p.unrealized_pnl)}</td>
+      <td>${fmt(p.market_value)}</td>
+    </tr>`).join('');
+}
+
+async function init(){
+  const me=await fetch('/api/me').then(r=>r.json());
+  currentBalance=me.balance;
+  document.getElementById('navBalance').textContent=fmt(me.balance);
+  loadPositions();
+  document.getElementById('symbolInput').value='AAPL';
+  createChart('AAPL');
+  refreshPrice('AAPL');
+  document.getElementById('tradeSymbol').value='AAPL';
+}
+document.getElementById('symbolInput').addEventListener('keydown',e=>{if(e.key==='Enter')loadSymbol();});
+init();
+setInterval(()=>refreshPrice(currentSymbol),30000);
+</script>
+  <script src="/static/js/theme.js"></script>
+</body>
+</html>
