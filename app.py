@@ -1214,17 +1214,25 @@ def autopilot_page():
 def api_autopilot_config_get():
     user = current_user()
     db = get_db()
-    row = db.execute(
-        "SELECT autopilot, autopilot_budget, autopilot_max_pct, autopilot_daily_loss_limit FROM users WHERE id=?",
-        (user["id"],)
-    ).fetchone()
-    return jsonify({
-        "enabled":           bool(row["autopilot"]) if row else False,
-        "budget":            float(row["autopilot_budget"] or 0) if row else 0,
-        "max_pct":           float(row["autopilot_max_pct"] or 20) if row else 20,
-        "daily_loss_limit":  float(row["autopilot_daily_loss_limit"] or 500) if row else 500,
-        "ai_available":      bool(_ai_client),
-    })
+    try:
+        row = db.execute(
+            "SELECT autopilot, autopilot_budget, autopilot_max_pct, autopilot_daily_loss_limit FROM users WHERE id=?",
+            (user["id"],)
+        ).fetchone()
+        return jsonify({
+            "enabled":          bool(row["autopilot"]) if row else False,
+            "budget":           float(row["autopilot_budget"] or 0) if row else 0,
+            "max_pct":          float(row["autopilot_max_pct"] or 20) if row else 20,
+            "daily_loss_limit": float(row["autopilot_daily_loss_limit"] or 500) if row else 500,
+            "ai_available":     bool(_ai_client),
+        })
+    except Exception:
+        row = db.execute("SELECT autopilot FROM users WHERE id=?", (user["id"],)).fetchone()
+        return jsonify({
+            "enabled": bool(row["autopilot"]) if row else False,
+            "budget": 0, "max_pct": 20, "daily_loss_limit": 500,
+            "ai_available": bool(_ai_client),
+        })
 
 
 @app.route("/api/autopilot/config", methods=["POST"])
@@ -1257,101 +1265,134 @@ def api_autopilot_stats():
     user = current_user()
     db   = get_db()
 
-    try:
-        row = db.execute(
-            "SELECT autopilot, autopilot_budget, autopilot_max_pct, autopilot_daily_loss_limit, balance FROM users WHERE id=?",
-            (user["id"],)
-        ).fetchone()
-    except Exception:
-        # columns may not exist yet — return safe defaults
-        row = db.execute("SELECT autopilot, balance FROM users WHERE id=?", (user["id"],)).fetchone()
+    def _safe_default(err=""):
+        base = db.execute("SELECT autopilot, balance FROM users WHERE id=?", (user["id"],)).fetchone()
         return jsonify({
-            "enabled": bool(row["autopilot"]) if row else False,
-            "budget": 0, "deployed": 0, "available": float(row["balance"]) if row else 0,
+            "enabled": bool(base["autopilot"]) if base else False,
+            "budget": 0, "deployed": 0,
+            "available": float(base["balance"]) if base else 0,
             "today_pnl": 0, "total_pnl": 0, "trade_count": 0, "today_trades": 0,
             "paused_today": False, "daily_loss_limit": 500, "max_pct": 20,
             "logs": [], "positions": [], "ai_available": bool(_ai_client),
+            "_error": err,
         })
 
-    budget           = float(row["autopilot_budget"] or 0)
-    deployed         = _autopilot_deployed(user["id"], db)
-    available        = max(0, budget - deployed) if budget > 0 else float(row["balance"])
-    today_pnl        = _autopilot_today_pnl(user["id"], db)
-
-    # all-time autopilot realized P&L
-    total_pnl_row = db.execute(
-        "SELECT COALESCE(SUM(pnl),0) as total FROM trades WHERE user_id=? AND source='autopilot' AND side='sell'",
-        (user["id"],)
-    ).fetchone()
-    total_pnl = float(total_pnl_row["total"] or 0)
-
-    # trade counts
-    trade_count = db.execute(
-        "SELECT COUNT(*) as n FROM trades WHERE user_id=? AND source='autopilot'",
-        (user["id"],)
-    ).fetchone()["n"]
-
-    today = datetime.now().date().isoformat()
     try:
+        row = db.execute(
+            "SELECT autopilot, autopilot_budget, autopilot_max_pct, "
+            "autopilot_daily_loss_limit, balance FROM users WHERE id=?",
+            (user["id"],)
+        ).fetchone()
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return _safe_default(str(e))
+
+    try:
+        budget       = float(row["autopilot_budget"] or 0)
+        max_pct_val  = float(row["autopilot_max_pct"] or 20)
+        daily_limit  = float(row["autopilot_daily_loss_limit"] or 500)
+        balance      = float(row["balance"] or 0)
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return _safe_default(str(e))
+
+    try:
+        deployed  = _autopilot_deployed(user["id"], db)
+        available = max(0, budget - deployed) if budget > 0 else balance
+    except Exception:
+        deployed = 0.0
+        available = balance
+
+    today_pnl = _autopilot_today_pnl(user["id"], db)
+
+    try:
+        total_pnl = float(db.execute(
+            "SELECT COALESCE(SUM(pnl),0) as total FROM trades "
+            "WHERE user_id=? AND source='autopilot' AND side='sell'",
+            (user["id"],)
+        ).fetchone()["total"] or 0)
+    except Exception:
+        total_pnl = 0.0
+
+    try:
+        trade_count = db.execute(
+            "SELECT COUNT(*) as n FROM trades WHERE user_id=? AND source='autopilot'",
+            (user["id"],)
+        ).fetchone()["n"]
+    except Exception:
+        trade_count = 0
+
+    try:
+        today = datetime.now().date().isoformat()
         today_trades = db.execute(
-            "SELECT COUNT(*) as n FROM trades WHERE user_id=? AND source='autopilot' AND DATE(executed_at) = ?",
+            "SELECT COUNT(*) as n FROM trades "
+            "WHERE user_id=? AND source='autopilot' AND DATE(executed_at) = ?",
             (user["id"], today)
         ).fetchone()["n"]
     except Exception:
         today_trades = 0
 
-    # last 10 autopilot log entries
-    logs = db.execute(
-        "SELECT action, symbol, qty, price, reasoning, executed_at FROM autopilot_log "
-        "WHERE user_id=? ORDER BY executed_at DESC LIMIT 10",
-        (user["id"],)
-    ).fetchall()
+    try:
+        logs = [dict(l) for l in db.execute(
+            "SELECT action, symbol, qty, price, reasoning, executed_at "
+            "FROM autopilot_log WHERE user_id=? ORDER BY executed_at DESC LIMIT 10",
+            (user["id"],)
+        ).fetchall()]
+    except Exception:
+        logs = []
 
-    # open positions opened by autopilot
-    ap_symbols = {r["symbol"] for r in db.execute(
-        "SELECT DISTINCT symbol FROM trades WHERE user_id=? AND source='autopilot' AND side='buy'",
-        (user["id"],)
-    ).fetchall()}
+    try:
+        ap_sym_rows = db.execute(
+            "SELECT DISTINCT symbol FROM trades "
+            "WHERE user_id=? AND source='autopilot' AND side='buy'",
+            (user["id"],)
+        ).fetchall()
+        ap_symbols = {r["symbol"] for r in ap_sym_rows}
+    except Exception:
+        ap_symbols = set()
+
     ap_positions = []
     for sym in ap_symbols:
-        pos = db.execute(
-            "SELECT symbol, qty, avg_price FROM positions WHERE user_id=? AND symbol=? AND side='long'",
-            (user["id"], sym)
-        ).fetchone()
-        if pos:
-            try:
-                cur_price, _ = _get_price(sym)
-                unreal = round((cur_price - pos["avg_price"]) * pos["qty"], 2)
-            except Exception:
-                cur_price = pos["avg_price"]
-                unreal = 0.0
-            ap_positions.append({
-                "symbol":        sym,
-                "qty":           pos["qty"],
-                "avg_price":     pos["avg_price"],
-                "current_price": round(cur_price, 2),
-                "market_value":  round(cur_price * pos["qty"], 2),
-                "unrealized_pnl": unreal,
-            })
+        try:
+            pos = db.execute(
+                "SELECT symbol, qty, avg_price FROM positions "
+                "WHERE user_id=? AND symbol=? AND side='long'",
+                (user["id"], sym)
+            ).fetchone()
+            if pos:
+                try:
+                    cur_price, _ = _get_price(sym)
+                    unreal = round((cur_price - pos["avg_price"]) * pos["qty"], 2)
+                except Exception:
+                    cur_price = pos["avg_price"]
+                    unreal = 0.0
+                ap_positions.append({
+                    "symbol": sym, "qty": pos["qty"],
+                    "avg_price": pos["avg_price"],
+                    "current_price": round(cur_price, 2),
+                    "market_value": round(cur_price * pos["qty"], 2),
+                    "unrealized_pnl": unreal,
+                })
+        except Exception:
+            pass
 
-    daily_loss_limit = float(row["autopilot_daily_loss_limit"] or 500)
-    paused_today = today_pnl <= -abs(daily_loss_limit)
+    paused_today = today_pnl <= -abs(daily_limit)
 
     return jsonify({
-        "enabled":           bool(row["autopilot"]),
-        "budget":            budget,
-        "deployed":          round(deployed, 2),
-        "available":         round(available, 2),
-        "today_pnl":         round(today_pnl, 2),
-        "total_pnl":         round(total_pnl, 2),
-        "trade_count":       trade_count,
-        "today_trades":      today_trades,
-        "paused_today":      paused_today,
-        "daily_loss_limit":  daily_loss_limit,
-        "max_pct":           float(row["autopilot_max_pct"] or 20),
-        "logs":              [dict(l) for l in logs],
-        "positions":         ap_positions,
-        "ai_available":      bool(_ai_client),
+        "enabled":          bool(row["autopilot"]),
+        "budget":           budget,
+        "deployed":         round(deployed, 2),
+        "available":        round(available, 2),
+        "today_pnl":        round(today_pnl, 2),
+        "total_pnl":        round(total_pnl, 2),
+        "trade_count":      trade_count,
+        "today_trades":     today_trades,
+        "paused_today":     paused_today,
+        "daily_loss_limit": daily_limit,
+        "max_pct":          max_pct_val,
+        "logs":             logs,
+        "positions":        ap_positions,
+        "ai_available":     bool(_ai_client),
     })
 
 
