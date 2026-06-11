@@ -37,7 +37,10 @@
         <h2>🚀 Autopilot</h2>
         <p style="color:var(--muted);font-size:.9rem;">Allocate a budget — Claude trades it autonomously on your behalf</p>
       </div>
-      <div style="display:flex;gap:.75rem;align-items:center;margin-top:.25rem;">
+      <div style="display:flex;gap:.75rem;align-items:center;margin-top:.25rem;flex-wrap:wrap;">
+        <button id="coverLossesBtn" onclick="coverLosses()" class="btn btn-red"
+          style="font-size:.85rem;padding:.45rem 1rem;opacity:0.35;cursor:not-allowed;"
+          disabled title="Loading portfolio…">🛡️ Cover Losses</button>
         <button id="runNowBtn" onclick="runNow()" class="btn btn-secondary" style="font-size:.85rem;">▶ Run Now</button>
         <button id="toggleBtn" onclick="toggleAutopilot()" class="btn btn-green" style="font-size:.95rem;padding:.5rem 1.2rem;min-width:120px;">
           — Loading…
@@ -260,6 +263,9 @@ async function loadStats() {
 
   // activity feed
   renderFeed(res.logs || []);
+
+  // enable / grey out Cover Losses based on real portfolio state
+  updateCoverLossesBtn();
 }
 
 function _applyConfig(cfg) {
@@ -388,23 +394,37 @@ function renderFeed(logs) {
   }
   el.innerHTML = logs.map(l => {
     const action = (l.action || '').toUpperCase();
-    const isGood = ['BUY','SELL'].includes(action);
-    const isBad  = ['PAUSED','SKIP','SKIPPED'].includes(action) || action.startsWith('SKIP');
-    const accentCol = isGood ? (action === 'BUY' ? 'var(--accent)' : 'var(--gold)') : 'var(--muted)';
-    const badgeColor = isBad  ? 'rgba(255,100,100,.15)' :
-                       (action === 'BUY'  ? 'rgba(126,200,80,.15)' :
-                        action === 'SELL' ? 'rgba(255,180,0,.15)' : 'rgba(255,255,255,.06)');
-    const badgeText  = isBad  ? '#f66' :
-                       (action === 'BUY'  ? 'var(--accent)' :
-                        action === 'SELL' ? 'var(--gold)' : 'var(--muted)');
+    const isCover = action.startsWith('COVER_');
+    const baseAct = isCover ? action.replace('COVER_', '') : action;
+    const isBad   = ['PAUSED','SKIP','SKIPPED'].includes(action) || action.startsWith('SKIP');
+
+    let badgeColor, badgeText, badgeLabel;
+    if (isCover) {
+      badgeColor = baseAct === 'SELL' ? 'rgba(212,95,95,.2)' : 'rgba(126,200,80,.18)';
+      badgeText  = baseAct === 'SELL' ? 'var(--red)' : 'var(--accent)';
+      badgeLabel = `🛡️ ${baseAct}`;
+    } else if (isBad) {
+      badgeColor = 'rgba(255,100,100,.15)'; badgeText = '#f66'; badgeLabel = action;
+    } else if (action === 'BUY') {
+      badgeColor = 'rgba(126,200,80,.15)'; badgeText = 'var(--accent)'; badgeLabel = action;
+    } else if (action === 'SELL') {
+      badgeColor = 'rgba(255,180,0,.15)'; badgeText = 'var(--gold)'; badgeLabel = action;
+    } else {
+      badgeColor = 'rgba(255,255,255,.06)'; badgeText = 'var(--muted)'; badgeLabel = action;
+    }
+
     const symbol = l.symbol ? ` <b>${l.symbol}</b>` : '';
     const qty    = (l.qty && l.qty > 0) ? ` × ${l.qty}` : '';
     const price  = l.price ? ` @ ${fmt(l.price)}` : '';
+    const coverTag = isCover
+      ? `<span style="font-size:.68rem;color:var(--muted);background:rgba(212,95,95,.08);padding:.1rem .45rem;border-radius:99px;">recovery</span>`
+      : '';
     return `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.75rem 1rem;margin-bottom:.5rem;">
+    <div style="background:var(--surface);border:1px solid ${isCover ? 'rgba(212,95,95,.25)' : 'var(--border)'};border-radius:10px;padding:.75rem 1rem;margin-bottom:.5rem;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.35rem;">
         <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">
-          <span style="background:${badgeColor};color:${badgeText};padding:.15rem .55rem;border-radius:99px;font-size:.7rem;font-weight:700;">${action}</span>
+          <span style="background:${badgeColor};color:${badgeText};padding:.15rem .55rem;border-radius:99px;font-size:.7rem;font-weight:700;">${badgeLabel}</span>
+          ${coverTag}
           <span style="font-size:.85rem;">${symbol}${qty}${price}</span>
         </div>
         <span style="font-size:.72rem;color:var(--muted);white-space:nowrap;margin-left:.5rem;">${fmtT(l.executed_at)}</span>
@@ -455,6 +475,106 @@ function tickScanCountdown() {
 
 setInterval(tickScanCountdown, 1000);
 setInterval(loadScanStatus, 60_000); // re-sync every minute
+
+// ── Cover Losses button state ─────────────────────────────────────────────────
+function updateCoverLossesBtn() {
+  const btn = document.getElementById('coverLossesBtn');
+  if (!btn || !_stats) return;
+
+  // Check for any unrealised losses across open positions
+  const unrealisedLoss = (_stats.positions || []).reduce(
+    (sum, p) => sum + Math.min(0, p.unrealized_pnl || 0), 0
+  );
+  const hasLoss = unrealisedLoss < -0.01 || _stats.today_pnl < -0.01;
+
+  if (hasLoss) {
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.cursor  = 'pointer';
+    btn.title = 'AI will sell losing positions and redeploy into safe assets';
+  } else {
+    btn.disabled = true;
+    btn.style.opacity = '0.35';
+    btn.style.cursor  = 'not-allowed';
+    btn.title = 'No losses detected — portfolio is healthy';
+  }
+}
+
+// ── Cover Losses ──────────────────────────────────────────────────────────────
+async function coverLosses() {
+  const btn = document.getElementById('coverLossesBtn');
+
+  // Build a clear description based on current portfolio state
+  let lossLine = '';
+  if (_stats) {
+    const unrealised = (_stats.positions || []).reduce((sum, p) => sum + (p.unrealized_pnl || 0), 0);
+    if (unrealised < 0)
+      lossLine = `\nUnrealised loss right now: ${fmt(Math.abs(unrealised))}\n`;
+    else if (_stats.total_pnl < 0)
+      lossLine = `\nTotal P&L so far: ${fmtN(_stats.total_pnl)}\n`;
+  }
+
+  const confirmed = confirm(
+    `🛡️  Cover Losses Mode\n` +
+    `────────────────────────────────\n` +
+    lossLine +
+    `\nClaude will:\n` +
+    `  • Sell every position with > 2% unrealised loss\n` +
+    `  • Prioritise cutting the worst loser first\n` +
+    `  • Redeploy freed capital into safe, defensive\n` +
+    `    assets only (SPY, QQQ, blue-chip ETFs)\n` +
+    `\nThis is a one-shot recovery run — autopilot\n` +
+    `does not need to be enabled.\n\nProceed?`
+  );
+  if (!confirmed) return;
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Recovering…';
+
+  // Show recovery banner
+  const banner = document.getElementById('statusBanner');
+  banner.style.display = 'block';
+  banner.style.background = 'rgba(212,95,95,.12)';
+  banner.style.color = 'var(--red)';
+  banner.style.border = '1px solid rgba(212,95,95,.25)';
+  banner.textContent = '🛡️ Running cover losses — Claude is analysing your portfolio…';
+
+  try {
+    const res = await fetch('/api/autopilot/cover-losses', {method:'POST'}).then(r => r.json());
+
+    if (!res.ok) {
+      banner.style.background = 'rgba(255,100,100,.12)';
+      banner.textContent = '❌ Recovery failed: ' + (res.message || 'Unknown error');
+    } else {
+      const trades = (res.trades || []).filter(t => t.action.startsWith('COVER_'));
+
+      if (trades.length) {
+        banner.style.background = 'rgba(126,200,80,.1)';
+        banner.style.color = 'var(--accent)';
+        banner.style.border = '1px solid rgba(126,200,80,.2)';
+        banner.textContent = `🛡️ Recovery complete — ${trades.length} trade(s) executed. See Recent Decisions below.`;
+
+        // Show detail
+        const summary = trades.map(t => {
+          const verb = t.action === 'COVER_SELL' ? '🔴 SOLD' : '🟢 BOUGHT';
+          return `${verb} ${t.symbol || ''}: ${t.reasoning}`;
+        }).join('\n\n');
+        alert('🛡️ Cover Losses — Recovery Trades\n\n' + summary);
+      } else {
+        banner.style.background = 'rgba(126,200,80,.06)';
+        banner.style.color = 'var(--muted)';
+        banner.style.border = '1px solid rgba(126,200,80,.15)';
+        banner.textContent = '✅ Portfolio reviewed — no recovery trades needed right now.';
+      }
+      loadStats();
+    }
+  } catch(e) {
+    banner.textContent = '❌ Request failed: ' + e.message;
+  }
+
+  btn.disabled = false;
+  btn.textContent = '🛡️ Cover Losses';
+}
 
 // init
 fetch('/api/me').then(r => r.json()).then(d => document.getElementById('navUser').textContent = d.username);

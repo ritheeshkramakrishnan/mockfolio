@@ -439,9 +439,11 @@ def _autopilot_today_pnl(user_id: int, db) -> float:
         return 0.0
 
 
-def _run_autopilot(user_id: int, db) -> list:
+def _run_autopilot(user_id: int, db, mode: str = "standard") -> list:
     """
     Claude analyzes the portfolio and market, then executes trades automatically.
+    mode: "standard" — normal autopilot
+          "cover_losses" — defensive recovery: sell losers, buy safe assets
     Respects autopilot_budget (ring-fenced capital) and autopilot_daily_loss_limit.
     Returns a list of log entries for what was done.
     """
@@ -527,7 +529,51 @@ def _run_autopilot(user_id: int, db) -> list:
         f"- Daily loss limit: ${daily_loss_limit:,.0f} | Today P&L so far: ${today_pnl:+.2f}"
     )
 
-    prompt = f"""You are an AI autopilot managing a paper trading portfolio. Make trading decisions NOW.
+    # ── compute unrealized P&L across open positions ──────────────────────────
+    total_unrealized = sum(
+        (prices.get(p["symbol"], p["avg_price"]) - p["avg_price"]) * p["qty"]
+        for p in positions
+    )
+
+    if mode == "cover_losses":
+        # Sort positions by P&L so Claude sees losers first
+        pos_summary_sorted = sorted(
+            pos_summary,
+            key=lambda s: float(s.split("P&L $")[1].replace(",","")) if "P&L $" in s else 0
+        )
+        prompt = f"""You are an AI autopilot running in COVER LOSSES mode. Your ONLY goal is to stop losses and recover capital safely.
+
+PORTFOLIO:
+- Cash balance: ${balance:,.2f}
+- Available capital: ${working_cash:,.2f}
+- Unrealized P&L across all positions: ${total_unrealized:+,.2f}
+- Today's realized P&L: ${today_pnl:+,.2f}
+- Open positions ({len(positions)}) — sorted worst first:
+{chr(10).join(pos_summary_sorted) if pos_summary_sorted else '  None'}
+
+MARKET PRICES:
+{chr(10).join(f'  {s}: ${p:.2f}' for s,p in prices.items())}
+
+RECENT NEWS:
+{headlines}
+
+COVER LOSSES RULES — follow strictly:
+1. SELL every position with unrealized loss > 2% — cut the bleeding immediately, do not wait
+2. Sell the WORST performing position first if multiple are losing
+3. Use freed capital ONLY for safe, defensive assets: SPY, QQQ, VTI, SCHD, BRK-B, or similar low-volatility blue-chip ETFs
+4. Zero speculative or high-volatility plays — no single stocks unless they are mega-cap (AAPL, MSFT, GOOGL, JNJ)
+5. Max {max_pct*100:.0f}% of available capital per trade — keep positions small to limit further downside
+6. If no positions are losing, still deploy available cash into the safest ETF option
+7. Market hours do not apply — execute immediately
+
+IMPORTANT: You MUST return at least one BUY or SELL. Do NOT return HOLD.
+Respond ONLY with valid JSON — no markdown, no explanation:
+[
+  {{"action": "SELL", "symbol": "TSLA", "qty": 3, "reasoning": "Cutting loss: down 9.2%, freeing capital for defensive redeployment"}},
+  {{"action": "BUY",  "symbol": "SPY",  "qty": 2, "reasoning": "Safe redeployment into broad-market ETF: low volatility, strong liquidity"}}
+]"""
+    else:
+        prompt = f"""You are an AI autopilot managing a paper trading portfolio. Make trading decisions NOW.
 
 PORTFOLIO:
 - Cash balance: ${balance:,.2f}
@@ -672,11 +718,13 @@ You MUST include at least one BUY or SELL. Respond ONLY with valid JSON:
                 balance += proceeds
                 executed_price = price
 
+        # Cover losses mode: use a distinct log action so the feed can show a shield badge
+        log_action = f"COVER_{action}" if (mode == "cover_losses" and action in ("BUY","SELL")) else action
         db.execute(
             "INSERT INTO autopilot_log (user_id,action,symbol,qty,price,reasoning) VALUES (?,?,?,?,?,?)",
-            (user_id, action, symbol or None, qty or None, executed_price, reason)
+            (user_id, log_action, symbol or None, qty or None, executed_price, reason)
         )
-        log_entries.append({"action": action, "symbol": symbol, "qty": qty, "reasoning": reason})
+        log_entries.append({"action": log_action, "symbol": symbol, "qty": qty, "reasoning": reason})
 
     if log_entries:
         _record_snapshot(user_id, db)
@@ -1411,6 +1459,34 @@ def api_autopilot_run():
     except Exception as e:
         import traceback; traceback.print_exc()
         return jsonify({"ok": False, "message": f"Unexpected error: {e}"}), 500
+
+
+@app.route("/api/autopilot/cover-losses", methods=["POST"])
+@login_required
+def api_autopilot_cover_losses():
+    """
+    One-shot recovery run: Claude sells losing positions and reinvests defensively.
+    Does NOT require autopilot to be enabled — available as a standalone action.
+    """
+    if not _ai_client:
+        return jsonify({"ok": False, "message": "No Anthropic API key — add ANTHROPIC_API_KEY to Railway variables"}), 400
+    try:
+        user = current_user()
+        db   = get_db()
+        results = _run_autopilot(user["id"], db, mode="cover_losses")
+        cover_trades = [t for t in results if t.get("action","").startswith("COVER_")]
+        return jsonify({
+            "ok":     True,
+            "trades": results,
+            "recovered": len(cover_trades),
+            "message": f"Recovery complete — {len(cover_trades)} trade(s) executed to cover losses."
+                       if cover_trades else "Portfolio reviewed — no immediate recovery trades needed."
+        })
+    except RuntimeError as e:
+        return jsonify({"ok": False, "message": str(e)}), 400
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return jsonify({"ok": False, "message": f"Recovery failed: {e}"}), 500
 
 
 @app.route("/autopilot")
