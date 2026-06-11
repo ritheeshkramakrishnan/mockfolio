@@ -40,7 +40,7 @@ CACHE_TTL = 60
 _news_cache: dict = {}
 _signals_cache: dict = {}
 NEWS_TTL = 900
-SIGNALS_TTL = 3600  # 1 hour — matches the frontend auto-refresh interval
+SIGNALS_TTL = 300   # 5 minutes — matches the background scheduler interval
 
 # ── news RSS feeds ────────────────────────────────────────────────────────────
 NEWS_FEEDS = [
@@ -380,6 +380,19 @@ def init_db():
                 token     TEXT UNIQUE NOT NULL,
                 expires_at TEXT NOT NULL,
                 used      INTEGER DEFAULT 0
+            )
+        """)
+        db.commit()
+    except Exception:
+        try: db.rollback()
+        except: pass
+    # persistent key-value cache (survives restarts — used for AI signals, etc.)
+    try:
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS app_cache (
+                key        TEXT PRIMARY KEY,
+                value      TEXT NOT NULL,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
         """)
         db.commit()
@@ -867,6 +880,16 @@ def _autopilot_scan_all():
     except Exception as e:
         print(f"[scheduler] scan failed: {e}")
 
+    # Refresh AI signals every 5 minutes (server-side, independent of any user's browser)
+    try:
+        print("[scheduler] refreshing AI signals…")
+        articles = _fetch_news(limit=20)
+        _signals_cache.clear()
+        _generate_signals(articles, force=True)
+        print("[scheduler] AI signals refreshed")
+    except Exception as e:
+        print(f"[scheduler] signals refresh failed: {e}")
+
 
 def _start_scheduler():
     from apscheduler.schedulers.background import BackgroundScheduler
@@ -1022,15 +1045,69 @@ def _fallback_signals() -> list:
     ]
 
 
-def _generate_signals(articles: list) -> list:
-    now = datetime.now().timestamp()
-    if _signals_cache.get("signals") and now - _signals_cache.get("ts", 0) < SIGNALS_TTL:
-        return _signals_cache["signals"]
+def _signals_db_load():
+    """Load signals from DB cache. Returns (signals_list, timestamp_float) or (None, 0)."""
+    try:
+        if USE_POSTGRES:
+            db = _PgConn(_DB_URL)
+        else:
+            db = sqlite3.connect(DB_PATH)
+            db.row_factory = sqlite3.Row
+        row = db.execute("SELECT value FROM app_cache WHERE key=?", ("signals",)).fetchone()
+        db.close()
+        if row:
+            data = json.loads(row["value"])
+            return data.get("signals", []), float(data.get("ts", 0))
+    except Exception as e:
+        print(f"[signals] DB load error: {e}")
+    return None, 0.0
 
+
+def _signals_db_save(signals: list):
+    """Persist signals to DB so they survive server restarts."""
+    try:
+        if USE_POSTGRES:
+            db = _PgConn(_DB_URL)
+        else:
+            db = sqlite3.connect(DB_PATH)
+            db.row_factory = sqlite3.Row
+        val = json.dumps({"signals": signals, "ts": datetime.now().timestamp()})
+        now_str = datetime.now().isoformat()
+        try:
+            db.execute("DELETE FROM app_cache WHERE key=?", ("signals",))
+            db.execute("INSERT INTO app_cache(key, value, updated_at) VALUES (?,?,?)",
+                       ("signals", val, now_str))
+            db.commit()
+        except Exception as e:
+            try: db.rollback()
+            except: pass
+            print(f"[signals] DB save error (inner): {e}")
+        db.close()
+    except Exception as e:
+        print(f"[signals] DB save error: {e}")
+
+
+def _generate_signals(articles: list, force: bool = False) -> list:
+    now = datetime.now().timestamp()
+
+    if not force:
+        # 1. fastest path — in-memory cache
+        if _signals_cache.get("signals") and now - _signals_cache.get("ts", 0) < SIGNALS_TTL:
+            return _signals_cache["signals"]
+
+        # 2. survive restarts — check DB cache
+        db_signals, db_ts = _signals_db_load()
+        if db_signals and now - db_ts < SIGNALS_TTL:
+            _signals_cache["signals"] = db_signals
+            _signals_cache["ts"] = db_ts
+            return db_signals
+
+    # 3. need fresh signals
     if not _ai_client or not articles:
         signals = _fallback_signals()
         _signals_cache["signals"] = signals
         _signals_cache["ts"] = now
+        _signals_db_save(signals)
         return signals
 
     headlines = "\n".join(
@@ -1082,6 +1159,7 @@ Rules:
 
     _signals_cache["signals"] = signals
     _signals_cache["ts"] = now
+    _signals_db_save(signals)
     return signals
 
 
@@ -2030,7 +2108,7 @@ def api_signals_refresh():
     _news_cache.clear()
     _signals_cache.clear()
     articles = _fetch_news()
-    sigs = _generate_signals(articles)
+    sigs = _generate_signals(articles, force=True)
     return jsonify({"ok": True, "signals": sigs, "news": articles[:20]})
 
 

@@ -85,7 +85,7 @@
   <main class="main-content">
     <div class="section-head" style="margin-bottom:1rem;">
       <h2>📡 AI Market Signals</h2>
-      <p style="color:var(--muted);font-size:.9rem;">Live news → Claude AI analysis → Paper trade recommendations · Educational only</p>
+      <p style="color:var(--muted);font-size:.9rem;">Live news → Claude AI analysis → Paper trade recommendations · Auto-refreshes every 5 min · Educational only</p>
     </div>
 
     <div class="status-bar">
@@ -289,9 +289,8 @@ async function paperTrade(ticker, side) {
   }
 }
 
-// ── auto-refresh every 1 hour ─────────────────────────────────────────────────
-const REFRESH_INTERVAL = 60 * 60 * 1000; // 1 hour
-let _nextRefreshAt = Date.now() + REFRESH_INTERVAL;
+// ── countdown driven by server's next_refresh_secs ───────────────────────────
+let _nextRefreshAt = Date.now() + 5 * 60 * 1000; // default until first API response
 
 function fmtCountdown(ms) {
   if (ms <= 0) return 'now';
@@ -307,20 +306,36 @@ function tickCountdown() {
   if (el) el.textContent = fmtCountdown(remaining);
 }
 
-async function autoRefresh() {
-  _nextRefreshAt = Date.now() + REFRESH_INTERVAL;
-  await forceRefresh();
+// ── poll server every 30 s to pick up scheduler-generated signals ─────────────
+let _lastGenTime = null;
+
+async function pollForNewSignals() {
+  try {
+    const data = await fetch('/api/signals').then(r => r.json());
+    // Sync countdown to server's authoritative timer
+    if (typeof data.next_refresh_secs === 'number') {
+      _nextRefreshAt = Date.now() + data.next_refresh_secs * 1000;
+    }
+    // Re-render only when signals are actually newer (avoid flicker)
+    if (data.generated_at && data.generated_at !== _lastGenTime) {
+      _lastGenTime = data.generated_at;
+      document.getElementById('genTime').textContent = data.generated_at;
+      document.getElementById('sigCount').textContent = `${(data.signals||[]).length} signals`;
+      document.getElementById('newsCount').textContent = `${(data.news||[]).length} articles`;
+      if (data.signals && data.signals.length) {
+        document.getElementById('signalsContainer').innerHTML = data.signals.map(renderSignal).join('');
+      }
+      document.getElementById('newsContainer').innerHTML = renderNews(data.news);
+    }
+  } catch(e) { /* silent poll failure */ }
 }
 
-// initial load
-loadSignals();
+// initial load then start 30-second poll for scheduler-refreshed signals
+loadSignals().then(() => setInterval(pollForNewSignals, 30 * 1000));
 
 // countdown ticks every second
 setInterval(tickCountdown, 1000);
 tickCountdown();
-
-// force-regenerate signals every hour
-setInterval(autoRefresh, REFRESH_INTERVAL);
 </script>
   <script src="/static/js/theme.js"></script>
 </body>
