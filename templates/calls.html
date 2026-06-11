@@ -97,6 +97,29 @@
 <script>
 const fmt = n => '$' + parseFloat(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 
+function isMarketOpen() {
+  const et   = new Date(new Date().toLocaleString('en-US', {timeZone:'America/New_York'}));
+  const day  = et.getDay();
+  const mins = et.getHours() * 60 + et.getMinutes();
+  return day >= 1 && day <= 5 && mins >= 570 && mins < 960; // 9:30–16:00
+}
+
+function marketClosedAlert() {
+  const et      = new Date(new Date().toLocaleString('en-US', {timeZone:'America/New_York'}));
+  const day     = et.getDay();
+  const mins    = et.getHours() * 60 + et.getMinutes();
+  let when;
+  if (day >= 1 && day <= 5 && mins < 570) {
+    const left = 570 - mins;
+    when = `Opens today at 9:30 AM ET (in ${Math.floor(left/60)}h ${left%60}m)`;
+  } else if (day === 0 || day === 6 || mins >= 960) {
+    when = 'Opens ' + (day === 5 || day === 6 ? 'Monday' : 'tomorrow') + ' at 9:30 AM ET';
+  } else {
+    when = 'Opens next trading day at 9:30 AM ET';
+  }
+  alert(`🔒 Market's closed at the moment — please try again later.\n\n${when}`);
+}
+
 // ── watchlist ─────────────────────────────────────────────────────────────────
 let _watchlist = [];
 
@@ -210,6 +233,7 @@ function renderCalls(calls) {
 }
 
 async function generateCalls() {
+  if (!isMarketOpen()) { marketClosedAlert(); return; }
   if (!_watchlist.length) { alert('Add symbols to your watchlist first.'); return; }
   const btn = document.getElementById('genBtn');
   const loading = document.getElementById('callsLoading');
@@ -239,6 +263,7 @@ async function generateCalls() {
 }
 
 async function paperTradeCall(symbol, side, price) {
+  if (!isMarketOpen()) { marketClosedAlert(); return; }
   const qty = prompt(`How many shares of ${symbol} to ${side}?`, '10');
   if (!qty || isNaN(qty)) return;
   const res = await fetch('/api/trade', {
