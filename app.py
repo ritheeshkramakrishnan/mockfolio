@@ -840,6 +840,49 @@ def _cleanup_snapshots(db):
 # initialise DB when module is imported (works with gunicorn)
 init_db()
 
+# ── autopilot background scheduler ───────────────────────────────────────────
+_last_autopilot_scan: datetime = None   # track last scan time for the UI
+
+def _autopilot_scan_all():
+    """Run autopilot for every user who has it enabled. Called every 5 minutes."""
+    global _last_autopilot_scan
+    if not _ai_client:
+        return
+    try:
+        if USE_POSTGRES:
+            db = _PgConn(_DB_URL)
+        else:
+            db = sqlite3.connect(DB_PATH)
+            db.row_factory = sqlite3.Row
+
+        users = db.execute("SELECT id FROM users WHERE autopilot=1").fetchall()
+        print(f"[scheduler] autopilot scan — {len(users)} user(s) enabled")
+        for u in users:
+            try:
+                _run_autopilot(u["id"], db)
+            except Exception as e:
+                print(f"[scheduler] user {u['id']} error: {e}")
+        _last_autopilot_scan = datetime.now()
+        db.close()
+    except Exception as e:
+        print(f"[scheduler] scan failed: {e}")
+
+
+def _start_scheduler():
+    from apscheduler.schedulers.background import BackgroundScheduler
+    sched = BackgroundScheduler(daemon=True)
+    sched.add_job(_autopilot_scan_all, 'interval', minutes=5,
+                  id='autopilot_scan', max_instances=1, coalesce=True)
+    sched.start()
+    print("[scheduler] autopilot background scheduler started (5-min interval)")
+    return sched
+
+
+# Start scheduler — guard against Flask debug double-start and gunicorn pre-fork
+import os as _os
+if not (_os.environ.get("WERKZEUG_RUN_MAIN") == "false"):
+    _scheduler = _start_scheduler()
+
 # ── market data helpers ───────────────────────────────────────────────────────
 def _td_price(symbol: str) -> tuple:
     url = f"https://api.twelvedata.com/price?symbol={symbol.upper()}&apikey={TD_KEY}"
@@ -1252,6 +1295,25 @@ def api_autopilot_run():
 @login_required
 def autopilot_page():
     return render_template("autopilot.html")
+
+
+@app.route("/api/autopilot/scan-status")
+@login_required
+def api_autopilot_scan_status():
+    now = datetime.now()
+    INTERVAL = 5 * 60  # seconds
+    if _last_autopilot_scan:
+        secs_since = (now - _last_autopilot_scan).total_seconds()
+        secs_until  = max(0, INTERVAL - secs_since)
+        last_str    = _last_autopilot_scan.strftime("%H:%M:%S")
+    else:
+        secs_until = INTERVAL
+        last_str   = None
+    return jsonify({
+        "last_scan":       last_str,
+        "next_scan_secs":  int(secs_until),
+        "interval_secs":   INTERVAL,
+    })
 
 
 @app.route("/api/autopilot/config", methods=["GET"])

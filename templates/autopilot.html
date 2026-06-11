@@ -46,7 +46,15 @@
     </div>
 
     <!-- Status banner -->
-    <div id="statusBanner" style="display:none;padding:.75rem 1.1rem;border-radius:12px;margin-bottom:1.25rem;font-size:.85rem;font-weight:600;"></div>
+    <div id="statusBanner" style="display:none;padding:.75rem 1.1rem;border-radius:12px;margin-bottom:.75rem;font-size:.85rem;font-weight:600;"></div>
+
+    <!-- Auto-scan countdown (shown when autopilot is on) -->
+    <div id="scanBar" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.6rem 1.1rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:.75rem;font-size:.82rem;">
+      <span style="font-size:1rem;">⏱️</span>
+      <span style="color:var(--muted);">Auto-scanning every 5 min —</span>
+      <span style="color:var(--text);">next scan in <b id="scanCountdown" style="color:var(--accent);">—</b></span>
+      <span id="lastScanLabel" style="color:var(--muted);margin-left:auto;font-size:.76rem;"></span>
+    </div>
 
     <!-- Stats cards -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem;">
@@ -406,10 +414,53 @@ function renderFeed(logs) {
   }).join('');
 }
 
+// ── scan countdown ─────────────────────────────────────────────────────────
+let _nextScanAt = null;
+
+async function loadScanStatus() {
+  try {
+    const r = await fetch('/api/autopilot/scan-status');
+    if (!r.ok) return;
+    const d = await r.json();
+    _nextScanAt = Date.now() + d.next_scan_secs * 1000;
+    const lastEl = document.getElementById('lastScanLabel');
+    if (lastEl) lastEl.textContent = d.last_scan ? `Last scan: ${d.last_scan}` : 'Not yet scanned this session';
+  } catch(e) {}
+}
+
+function tickScanCountdown() {
+  const el = document.getElementById('scanCountdown');
+  const bar = document.getElementById('scanBar');
+  if (!el || !_stats) return;
+
+  // only show scan bar when autopilot is on
+  if (_stats.enabled) {
+    bar.style.display = 'flex';
+  } else {
+    bar.style.display = 'none';
+    return;
+  }
+
+  if (!_nextScanAt) { el.textContent = '—'; return; }
+  const secs = Math.max(0, Math.round((_nextScanAt - Date.now()) / 1000));
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  el.textContent = `${m}:${String(s).padStart(2,'0')}`;
+
+  // When countdown hits 0, reload stats to show fresh trades
+  if (secs === 0) {
+    setTimeout(() => { loadStats(); loadScanStatus(); }, 3000);
+  }
+}
+
+setInterval(tickScanCountdown, 1000);
+setInterval(loadScanStatus, 60_000); // re-sync every minute
+
 // init
 fetch('/api/me').then(r => r.json()).then(d => document.getElementById('navUser').textContent = d.username);
 loadStats();
 loadConfig();
+loadScanStatus();
 </script>
   <script src="/static/js/theme.js"></script>
 </body>
