@@ -326,8 +326,125 @@ textarea.input { font-family: var(--font); }
 .section-head h2 { font-size: 1.4rem; font-weight: 800; color: var(--cream); }
 .section-head p { color: var(--muted); font-size: .9rem; }
 
+/* ══════════════════════════════════════════════
+   MOBILE BOTTOM NAV (always in DOM; shown via media query)
+   ══════════════════════════════════════════════ */
+#mobileNav {
+  display: none;
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+  background: var(--surface); border-top: 1px solid var(--border);
+  height: 60px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+#mobileNav a, #mobileNav button {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 2px;
+  color: var(--muted); font-size: .58rem; font-weight: 600;
+  text-decoration: none; cursor: pointer;
+  background: none; border: none; outline: none;
+  padding: .4rem .2rem; min-height: 60px;
+  -webkit-tap-highlight-color: transparent; transition: color .15s;
+}
+#mobileNav a.active, #mobileNav button.active { color: var(--accent); }
+#mobileNav .mnav-icon { font-size: 1.3rem; line-height: 1; }
+
+#mobileMoreOverlay {
+  display: none; position: fixed; inset: 0; z-index: 299;
+  background: rgba(0,0,0,.55);
+}
+#mobileMoreOverlay.open { display: block; }
+
+#mobileMoreSheet {
+  display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 300;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 20px 20px 0 0; padding: 1rem 1.5rem 1.5rem;
+}
+#mobileMoreSheet.open { display: block; animation: mobileSheetUp .22s ease; }
+@keyframes mobileSheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+#mobileMoreSheet .sheet-title {
+  font-size: .72rem; color: var(--muted); font-weight: 700;
+  text-transform: uppercase; letter-spacing: .07em;
+  padding-bottom: .6rem; margin-bottom: .25rem;
+  border-bottom: 1px solid var(--border);
+}
+#mobileMoreSheet a {
+  display: flex; align-items: center; gap: .85rem;
+  padding: .75rem .25rem; color: var(--text); font-size: .95rem; font-weight: 500;
+  border-bottom: 1px solid var(--border); text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+#mobileMoreSheet a:last-child { border-bottom: none; }
+#mobileMoreSheet a.active { color: var(--accent); }
+#mobileMoreSheet .sheet-icon { font-size: 1.2rem; width: 1.6rem; text-align: center; }
+
+/* ══════════════════════════════════════════════
+   BREAKPOINT: TABLET / MOBILE  ≤ 768 px
+   ══════════════════════════════════════════════ */
 @media (max-width: 768px) {
+  #mobileNav { display: flex; }
+
+  /* nav */
+  nav { padding: 0 1rem; height: 56px; }
+  nav .nav-logo { font-size: 1.1rem; }
+  #marketBadge { display: none !important; }
+
+  /* sidebar → bottom nav */
   .sidebar { display: none; }
-  .main-content { margin-left: 0; }
-  nav { padding: 0 1rem; }
+  .app-layout { padding-top: 56px; }
+  .main-content { margin-left: 0; padding: 1rem 1rem 72px; }
+
+  /* stat cards — 2 columns */
+  .stat-cards { grid-template-columns: 1fr 1fr; gap: .75rem; }
+  .stat-card .value { font-size: 1.35rem; }
+  .stat-card { padding: 1rem; }
+
+  /* collapse any inline or class-based 2-col grids to single column */
+  .signals-grid,
+  [style*="grid-template-columns: 1fr 2fr"],
+  [style*="grid-template-columns: 2fr 1fr"],
+  [style*="grid-template-columns: 1fr 380px"],
+  [style*="grid-template-columns: 380px 1fr"],
+  [style*="grid-template-columns: 300px"],
+  [style*="grid-template-columns: 1fr 320px"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* AI chat */
+  .ai-chat { height: 360px; }
+  .msg { max-width: 90%; }
+
+  /* tables */
+  th, td { padding: .5rem .65rem; font-size: .8rem; }
+
+  /* section headings */
+  .section-head h2 { font-size: 1.1rem; }
+  .section-head p  { font-size: .82rem; }
+
+  /* cards / panels */
+  .chart-box   { padding: 1rem; }
+  .trade-panel { padding: 1rem; }
+  .card        { padding: 1.25rem; }
+
+  /* buttons — larger tap targets */
+  .btn { min-height: 40px; }
+
+  /* flashcard */
+  .fc-card { height: 170px; }
+  .fc-front .term { font-size: 1.4rem; }
+
+  /* status bars — wrap on small screens */
+  .status-bar { flex-wrap: wrap; gap: .5rem; font-size: .78rem; }
+
+  /* auth */
+  .auth-box { padding: 1.75rem 1.5rem; }
+}
+
+/* ══════════════════════════════════════════════
+   BREAKPOINT: SMALL PHONE  ≤ 480 px
+   ══════════════════════════════════════════════ */
+@media (max-width: 480px) {
+  .stat-cards { grid-template-columns: 1fr; }
+  .main-content { padding: .75rem .75rem 72px; }
+  nav { padding: 0 .75rem; }
+  .section-head h2 { font-size: 1rem; }
 }

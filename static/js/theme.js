@@ -258,12 +258,87 @@
     navLinks.insertBefore(badge, navLinks.firstChild);
   }
 
+  // ── mobile bottom nav ────────────────────────────────────────────────────────
+  function injectMobileNav() {
+    // Already injected (e.g. navigating via SPA)
+    if (document.getElementById('mobileNav')) return;
+
+    const path = window.location.pathname.replace(/\/$/, '') || '/';
+
+    const PRIMARY = [
+      { label: 'Home',      icon: '🏠', href: '/dashboard' },
+      { label: 'Trade',     icon: '💹', href: '/trade'     },
+      { label: 'Signals',   icon: '🤖', href: '/signals'   },
+      { label: 'Autopilot', icon: '🚀', href: '/autopilot' },
+    ];
+    const MORE = [
+      { label: 'Options',      icon: '📊', href: '/options'    },
+      { label: 'Market Calls', icon: '📡', href: '/calls'      },
+      { label: 'Activity Log', icon: '📋', href: '/activity'   },
+      { label: 'AI Tutor',     icon: '📚', href: '/learn'      },
+      { label: 'Flashcards',   icon: '🃏', href: '/flashcards' },
+    ];
+
+    const isMorePage = MORE.some(m => path === m.href || path.startsWith(m.href + '/'));
+
+    // ── bottom nav bar ──────────────────────────────────────────────────────
+    const nav = document.createElement('nav');
+    nav.id = 'mobileNav';
+
+    PRIMARY.forEach(item => {
+      const a    = document.createElement('a');
+      a.href     = item.href;
+      const active = path === item.href || path.startsWith(item.href + '/');
+      if (active) a.classList.add('active');
+      a.innerHTML = `<span class="mnav-icon">${item.icon}</span><span>${item.label}</span>`;
+      nav.appendChild(a);
+    });
+
+    const moreBtn = document.createElement('button');
+    if (isMorePage) moreBtn.classList.add('active');
+    moreBtn.innerHTML = `<span class="mnav-icon">☰</span><span>More</span>`;
+    nav.appendChild(moreBtn);
+
+    // ── overlay ──────────────────────────────────────────────────────────────
+    const overlay = document.createElement('div');
+    overlay.id = 'mobileMoreOverlay';
+
+    // ── slide-up sheet ───────────────────────────────────────────────────────
+    const sheet = document.createElement('div');
+    sheet.id = 'mobileMoreSheet';
+    const title = document.createElement('div');
+    title.className = 'sheet-title';
+    title.textContent = 'More';
+    sheet.appendChild(title);
+
+    MORE.forEach(item => {
+      const a  = document.createElement('a');
+      a.href   = item.href;
+      if (path === item.href) a.classList.add('active');
+      a.innerHTML = `<span class="sheet-icon">${item.icon}</span>${item.label}`;
+      sheet.appendChild(a);
+    });
+
+    function openSheet()  { sheet.classList.add('open');    overlay.classList.add('open');    }
+    function closeSheet() { sheet.classList.remove('open'); overlay.classList.remove('open'); }
+
+    moreBtn.addEventListener('click', () =>
+      sheet.classList.contains('open') ? closeSheet() : openSheet()
+    );
+    overlay.addEventListener('click', closeSheet);
+
+    document.body.appendChild(nav);
+    document.body.appendChild(overlay);
+    document.body.appendChild(sheet);
+  }
+
   // ── wire everything up ───────────────────────────────────────────────────────
   function init() {
     const navLinks = document.querySelector('.nav-links');
     if (!navLinks) return;
 
     injectMarketBadge(navLinks);
+    injectMobileNav();
 
     // inject 🎨 button before the first child of nav-links
     const btn = document.createElement('button');
