@@ -527,11 +527,33 @@ You MUST include at least one BUY or SELL. Respond ONLY with valid JSON:
         )
         raw = response.content[0].text.strip()
         start = raw.find("[")
-        end = raw.rfind("]") + 1
-        decisions = json.loads(raw[start:end])
+        end   = raw.rfind("]") + 1
+        decisions = json.loads(raw[start:end]) if start != -1 else []
     except Exception as e:
-        print(f"[autopilot] AI parse error: {e}")
-        return []
+        print(f"[autopilot] AI error: {e}")
+        # Propagate so the API endpoint can surface the real message
+        raise RuntimeError(f"AI call failed: {e}")
+
+    # ── hard fallback: if Claude returned only HOLDs, force a trade ──────────
+    has_action = any(d.get("action","").upper() in ("BUY","SELL") for d in decisions)
+    if not has_action:
+        # pick the first watchlist symbol we can afford
+        forced = None
+        for sym in watchlist_syms:
+            p = prices.get(sym)
+            if not p:
+                try: p, _ = _get_price(sym)
+                except: continue
+            spend = working_cash * max_pct
+            qty_forced = max(1, int(spend / p))
+            if working_cash >= p * qty_forced:
+                forced = {"action": "BUY", "symbol": sym, "qty": qty_forced,
+                          "reasoning": f"Forced trade: AI returned no actionable decision. Buying {sym} at ${p:.2f} as default position."}
+                break
+        if forced:
+            decisions = [forced]
+        else:
+            raise RuntimeError("Insufficient balance to place any trade.")
 
     log_entries = []
     for decision in decisions:
@@ -1191,14 +1213,16 @@ def api_autopilot_run():
         db = get_db()
         row = db.execute("SELECT autopilot FROM users WHERE id=?", (user["id"],)).fetchone()
         if not row or not row["autopilot"]:
-            return jsonify({"ok": False, "message": "Autopilot is off — enable it first"}), 400
+            return jsonify({"ok": False, "message": "Autopilot is off — enable it first using the toggle button"}), 400
         if not _ai_client:
-            return jsonify({"ok": False, "message": "No Anthropic API key configured"}), 400
+            return jsonify({"ok": False, "message": "No Anthropic API key — add ANTHROPIC_API_KEY to Railway variables"}), 400
         results = _run_autopilot(user["id"], db)
         return jsonify({"ok": True, "trades": results})
+    except RuntimeError as e:
+        return jsonify({"ok": False, "message": str(e)}), 400
     except Exception as e:
         import traceback; traceback.print_exc()
-        return jsonify({"ok": False, "message": str(e)}), 500
+        return jsonify({"ok": False, "message": f"Unexpected error: {e}"}), 500
 
 
 @app.route("/autopilot")
