@@ -508,15 +508,15 @@ RECENT NEWS:
 RULES:
 - Max {max_pct*100:.0f}% of available capital per single buy trade
 - Max 6 open positions total
-- Only buy if there is a strong catalyst
-- Sell positions that have hit profit targets or are showing weakness
-- If no good trades exist, return HOLD
+- You MUST make at least one BUY or SELL trade — do not return only HOLD
+- If you have open positions, consider selling the weakest one
+- If no open positions, buy the most promising symbol from the watchlist
+- Market hours do not apply here — execute regardless
 
-Respond ONLY with valid JSON, no explanation outside the JSON:
+You MUST include at least one BUY or SELL. Respond ONLY with valid JSON:
 [
   {{"action": "BUY", "symbol": "AAPL", "qty": 5, "reasoning": "Strong momentum..."}},
-  {{"action": "SELL", "symbol": "TSLA", "qty": 2, "reasoning": "Overbought..."}},
-  {{"action": "HOLD", "symbol": null, "qty": null, "reasoning": "Market uncertain, holding cash."}}
+  {{"action": "SELL", "symbol": "TSLA", "qty": 2, "reasoning": "Overbought..."}}
 ]"""
 
     try:
