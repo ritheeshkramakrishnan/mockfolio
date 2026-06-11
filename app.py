@@ -856,6 +856,49 @@ init_db()
 # ── autopilot background scheduler ───────────────────────────────────────────
 _last_autopilot_scan: datetime = None   # track last scan time for the UI
 
+
+def _scan_ts_save(dt: datetime):
+    """Persist the last autopilot scan timestamp to app_cache."""
+    try:
+        if USE_POSTGRES:
+            db = _PgConn(_DB_URL)
+        else:
+            db = sqlite3.connect(DB_PATH)
+            db.row_factory = sqlite3.Row
+        val = json.dumps({"ts": dt.isoformat()})
+        now_str = dt.isoformat()
+        try:
+            db.execute("DELETE FROM app_cache WHERE key=?", ("last_autopilot_scan",))
+            db.execute("INSERT INTO app_cache(key, value, updated_at) VALUES (?,?,?)",
+                       ("last_autopilot_scan", val, now_str))
+            db.commit()
+        except Exception as e:
+            try: db.rollback()
+            except: pass
+            print(f"[scheduler] scan ts save error: {e}")
+        db.close()
+    except Exception as e:
+        print(f"[scheduler] scan ts save outer error: {e}")
+
+
+def _scan_ts_load() -> datetime | None:
+    """Load the last autopilot scan timestamp from app_cache."""
+    try:
+        if USE_POSTGRES:
+            db = _PgConn(_DB_URL)
+        else:
+            db = sqlite3.connect(DB_PATH)
+            db.row_factory = sqlite3.Row
+        row = db.execute("SELECT value FROM app_cache WHERE key=?", ("last_autopilot_scan",)).fetchone()
+        db.close()
+        if row:
+            data = json.loads(row["value"])
+            return datetime.fromisoformat(data["ts"])
+    except Exception as e:
+        print(f"[scheduler] scan ts load error: {e}")
+    return None
+
+
 def _autopilot_scan_all():
     """Run autopilot for every user who has it enabled. Called every 5 minutes."""
     global _last_autopilot_scan
@@ -876,6 +919,7 @@ def _autopilot_scan_all():
             except Exception as e:
                 print(f"[scheduler] user {u['id']} error: {e}")
         _last_autopilot_scan = datetime.now()
+        _scan_ts_save(_last_autopilot_scan)
         db.close()
     except Exception as e:
         print(f"[scheduler] scan failed: {e}")
@@ -1378,12 +1422,16 @@ def autopilot_page():
 @app.route("/api/autopilot/scan-status")
 @login_required
 def api_autopilot_scan_status():
+    global _last_autopilot_scan
     now = datetime.now()
     INTERVAL = 5 * 60  # seconds
-    if _last_autopilot_scan:
-        secs_since = (now - _last_autopilot_scan).total_seconds()
+    # Load from DB if in-memory value was lost (e.g. after a restart)
+    last = _last_autopilot_scan or _scan_ts_load()
+    if last:
+        _last_autopilot_scan = last   # repopulate in-memory for next call
+        secs_since = (now - last).total_seconds()
         secs_until  = max(0, INTERVAL - secs_since)
-        last_str    = _last_autopilot_scan.strftime("%H:%M:%S")
+        last_str    = last.strftime("%H:%M:%S")
     else:
         secs_until = INTERVAL
         last_str   = None
