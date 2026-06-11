@@ -189,10 +189,81 @@
     return panel;
   }
 
+  // ── market hours badge ───────────────────────────────────────────────────────
+  function marketStatus() {
+    const now = new Date();
+    // Get current time in America/New_York (handles EST/EDT automatically)
+    const et = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    const day  = et.getDay();   // 0=Sun, 6=Sat
+    const h    = et.getHours();
+    const m    = et.getMinutes();
+    const mins = h * 60 + m;    // minutes since midnight ET
+
+    const isWeekday  = day >= 1 && day <= 5;
+    const inSession  = mins >= 9 * 60 + 30 && mins < 16 * 60;   // 9:30–16:00
+    const isOpen     = isWeekday && inSession;
+
+    // Time until open / close
+    let nextLabel = '';
+    if (isOpen) {
+      const minsLeft = (16 * 60) - mins;
+      nextLabel = `closes in ${Math.floor(minsLeft / 60)}h ${minsLeft % 60}m`;
+    } else if (isWeekday && mins < 9 * 60 + 30) {
+      const minsLeft = (9 * 60 + 30) - mins;
+      nextLabel = `opens in ${Math.floor(minsLeft / 60)}h ${minsLeft % 60}m`;
+    } else {
+      // Weekend or after close — find next Monday (or next day)
+      const daysUntilMon = day === 0 ? 1 : (day === 6 ? 2 : 1);
+      nextLabel = `opens ${daysUntilMon === 1 ? 'tomorrow' : 'Monday'} 9:30 AM ET`;
+    }
+
+    return { isOpen, nextLabel };
+  }
+
+  function injectMarketBadge(navLinks) {
+    const badge = document.createElement('div');
+    badge.id = 'marketBadge';
+    badge.title = 'US Stock Market — 9:30 AM – 4:00 PM ET, Mon–Fri';
+    badge.style.cssText = `
+      display:flex; align-items:center; gap:.35rem;
+      font-size:.72rem; font-weight:700; letter-spacing:.04em;
+      padding:.25rem .65rem; border-radius:99px; cursor:default;
+      border:1px solid; white-space:nowrap; user-select:none;
+    `;
+
+    function refresh() {
+      const { isOpen, nextLabel } = marketStatus();
+      badge.style.background   = isOpen ? 'rgba(126,200,80,.12)' : 'rgba(255,255,255,.05)';
+      badge.style.borderColor  = isOpen ? 'rgba(126,200,80,.35)' : 'rgba(255,255,255,.12)';
+      badge.style.color        = isOpen ? 'var(--accent)'        : 'var(--muted)';
+      badge.innerHTML = `
+        <span style="width:7px;height:7px;border-radius:50%;background:${isOpen ? 'var(--accent)' : 'var(--muted)'};
+          ${isOpen ? 'box-shadow:0 0 6px var(--accent);animation:mktPulse 1.8s ease-in-out infinite;' : ''}
+          display:inline-block;flex-shrink:0;"></span>
+        ${isOpen ? 'MARKET OPEN' : 'MARKET CLOSED'}
+        <span style="font-weight:400;opacity:.7;font-size:.68rem;">${nextLabel}</span>
+      `;
+    }
+
+    // Add pulse keyframe once
+    if (!document.getElementById('mktStyle')) {
+      const s = document.createElement('style');
+      s.id = 'mktStyle';
+      s.textContent = `@keyframes mktPulse { 0%,100%{opacity:1} 50%{opacity:.4} }`;
+      document.head.appendChild(s);
+    }
+
+    refresh();
+    setInterval(refresh, 30_000); // update every 30s
+    navLinks.insertBefore(badge, navLinks.firstChild);
+  }
+
   // ── wire everything up ───────────────────────────────────────────────────────
   function init() {
     const navLinks = document.querySelector('.nav-links');
     if (!navLinks) return;
+
+    injectMarketBadge(navLinks);
 
     // inject 🎨 button before the first child of nav-links
     const btn = document.createElement('button');
