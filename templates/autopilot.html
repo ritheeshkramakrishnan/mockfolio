@@ -35,7 +35,7 @@
     <div class="section-head" style="align-items:flex-start;">
       <div>
         <h2>🚀 Autopilot</h2>
-        <p style="color:var(--muted);font-size:.9rem;">Allocate a budget — Claude trades it autonomously on your behalf</p>
+        <p style="color:var(--muted);font-size:.9rem;">Allocate a budget — AI trades it autonomously on your behalf</p>
       </div>
       <div style="display:flex;gap:.75rem;align-items:center;margin-top:.25rem;flex-wrap:wrap;">
         <button id="coverLossesBtn" onclick="coverLosses()" class="btn btn-red"
@@ -135,11 +135,11 @@
         <div class="card" style="padding:1.2rem 1.4rem;">
           <div style="font-weight:700;margin-bottom:.75rem;font-size:.9rem;">ℹ️ How Autopilot Works</div>
           <div style="font-size:.8rem;color:var(--muted);line-height:1.7;">
-            <div style="margin-bottom:.5rem;">🤖 <b style="color:var(--text);">Claude analyzes</b> live prices + market news to decide what to buy or sell</div>
+            <div style="margin-bottom:.5rem;">🤖 <b style="color:var(--text);">AI analyzes</b> live prices + market news to decide what to buy or sell</div>
             <div style="margin-bottom:.5rem;">💰 <b style="color:var(--text);">Budget cap</b> — AI can only deploy up to your allocated amount</div>
             <div style="margin-bottom:.5rem;">📏 <b style="color:var(--text);">Position sizing</b> — max per trade % keeps any single bet small</div>
             <div style="margin-bottom:.5rem;">🛑 <b style="color:var(--text);">Daily loss limit</b> — autopilot pauses if losses exceed your threshold</div>
-            <div>📋 <b style="color:var(--text);">Full transparency</b> — every decision logged with Claude's reasoning</div>
+            <div>📋 <b style="color:var(--text);">Full transparency</b> — every decision logged with AI reasoning</div>
           </div>
         </div>
 
@@ -225,7 +225,7 @@ async function loadStats() {
     banner.style.background = 'rgba(255,100,100,.12)';
     banner.style.color = 'var(--red)';
     banner.style.border = '1px solid rgba(255,100,100,.25)';
-    banner.textContent = '⚠️ No Anthropic API key configured — autopilot requires Claude AI to make decisions.';
+    banner.textContent = '⚠️ No Groq API key configured — autopilot requires a GROQ_API_KEY to make decisions.';
   } else if (res.paused_today) {
     banner.style.display = 'block';
     banner.style.background = 'rgba(255,180,0,.12)';
@@ -237,7 +237,7 @@ async function loadStats() {
     banner.style.background = 'rgba(126,200,80,.1)';
     banner.style.color = 'var(--accent)';
     banner.style.border = '1px solid rgba(126,200,80,.2)';
-    banner.textContent = `✅ Autopilot is ACTIVE — Claude is monitoring the market and trading up to ${fmt(res.budget || 0)} on your behalf.`;
+    banner.textContent = `✅ Autopilot is ACTIVE — AI is monitoring the market and trading up to ${fmt(res.budget || 0)} on your behalf.`;
   } else {
     banner.style.display = 'none';
   }
@@ -518,7 +518,7 @@ async function coverLosses() {
     `🛡️  Cover Losses Mode\n` +
     `────────────────────────────────\n` +
     lossLine +
-    `\nClaude will:\n` +
+    `\nAI will:\n` +
     `  • Sell every position with > 2% unrealised loss\n` +
     `  • Prioritise cutting the worst loser first\n` +
     `  • Redeploy freed capital into safe, defensive\n` +
@@ -537,7 +537,7 @@ async function coverLosses() {
   banner.style.background = 'rgba(212,95,95,.12)';
   banner.style.color = 'var(--red)';
   banner.style.border = '1px solid rgba(212,95,95,.25)';
-  banner.textContent = '🛡️ Running cover losses — Claude is analysing your portfolio…';
+  banner.textContent = '🛡️ Running cover losses — AI is analysing your portfolio…';
 
   try {
     const res = await fetch('/api/autopilot/cover-losses', {method:'POST'}).then(r => r.json());

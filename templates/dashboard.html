@@ -127,7 +127,7 @@
         <div style="font-size:.78rem;font-weight:600;color:var(--muted);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em;">Recent AI Decisions</div>
         <div id="autopilotLogItems" style="display:flex;flex-direction:column;gap:.5rem;max-height:220px;overflow-y:auto;"></div>
       </div>
-      <p id="autopilotNoKey" style="display:none;font-size:.82rem;color:var(--red);">⚠ Autopilot requires an Anthropic API key — add ANTHROPIC_API_KEY in Railway Variables.</p>
+      <p id="autopilotNoKey" style="display:none;font-size:.82rem;color:var(--red);">⚠ Autopilot requires a Groq API key — add GROQ_API_KEY in Railway Variables.</p>
     </div>
 
     <!-- quick actions -->
@@ -366,7 +366,7 @@ async function loadAutopilot() {
   if (!data.ai_available) {
     document.getElementById('autopilotNoKey').style.display = 'block';
     document.getElementById('autopilotBtn').style.display = 'none';
-    document.getElementById('autopilotStatus').textContent = 'Requires Anthropic API key';
+    document.getElementById('autopilotStatus').textContent = 'Requires Groq API key';
     return;
   }
 
