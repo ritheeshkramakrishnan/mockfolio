@@ -16,17 +16,17 @@ from flask import (
 import numpy as np
 import pandas as pd
 
-# ── optional Anthropic ────────────────────────────────────────────────────────
+# ── optional Groq ─────────────────────────────────────────────────────────────
 try:
-    import anthropic
-    ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY", "").strip()
-    _ai_client = anthropic.Anthropic(api_key=ANTHROPIC_KEY) if ANTHROPIC_KEY else None
-    if ANTHROPIC_KEY:
-        print(f"[anthropic] client ready (key prefix: {ANTHROPIC_KEY[:12]}…)")
+    from groq import Groq as _Groq
+    GROQ_KEY = os.environ.get("GROQ_API_KEY", "").strip()
+    _ai_client = _Groq(api_key=GROQ_KEY) if GROQ_KEY else None
+    if GROQ_KEY:
+        print(f"[groq] client ready (key prefix: {GROQ_KEY[:12]}…)")
     else:
-        print("[anthropic] no API key found in environment")
+        print("[groq] no API key found in environment")
 except Exception as e:
-    print(f"[anthropic] init failed: {e}")
+    print(f"[groq] init failed: {e}")
     _ai_client = None
 
 # ── Twelve Data API key ───────────────────────────────────────────────────────
@@ -602,12 +602,12 @@ You MUST include at least one BUY or SELL. Respond ONLY with valid JSON:
 ]"""
 
     try:
-        response = _ai_client.messages.create(
-            model="claude-opus-4-6",
+        response = _ai_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
             max_tokens=600,
             messages=[{"role": "user", "content": prompt}]
         )
-        raw = response.content[0].text.strip()
+        raw = response.choices[0].message.content.strip()
         start = raw.find("[")
         end   = raw.rfind("]") + 1
         decisions = json.loads(raw[start:end]) if start != -1 else []
@@ -1121,19 +1121,19 @@ def _fallback_signals() -> list:
         {"ticker": "SPY",  "direction": "BUY",  "confidence": 65, "timeframe": "1-5 days",
          "thesis": "Broad market momentum stays positive near all-time highs.",
          "risk": "Fed hawkishness or macro shock could reverse trend.",
-         "news_trigger": "⚠ Add ANTHROPIC_API_KEY + live news for real-time AI signals"},
+         "news_trigger": "⚠ Add GROQ_API_KEY + live news for real-time AI signals"},
         {"ticker": "NVDA", "direction": "BUY",  "confidence": 70, "timeframe": "1-3 days",
          "thesis": "AI chip demand structural tailwind continues into next earnings.",
          "risk": "Export restrictions or valuation compression.",
-         "news_trigger": "⚠ Add ANTHROPIC_API_KEY + live news for real-time AI signals"},
+         "news_trigger": "⚠ Add GROQ_API_KEY + live news for real-time AI signals"},
         {"ticker": "TLT",  "direction": "SELL", "confidence": 60, "timeframe": "3-7 days",
          "thesis": "Rising yields keep pressure on long-duration bond prices.",
          "risk": "Flight-to-safety rally if risk-off sentiment spikes.",
-         "news_trigger": "⚠ Add ANTHROPIC_API_KEY + live news for real-time AI signals"},
+         "news_trigger": "⚠ Add GROQ_API_KEY + live news for real-time AI signals"},
         {"ticker": "QQQ",  "direction": "BUY",  "confidence": 68, "timeframe": "2-5 days",
          "thesis": "Tech sector strength driven by AI earnings beats and multiple expansion.",
          "risk": "Rate sensitivity and stretched valuations in mega-caps.",
-         "news_trigger": "⚠ Add ANTHROPIC_API_KEY + live news for real-time AI signals"},
+         "news_trigger": "⚠ Add GROQ_API_KEY + live news for real-time AI signals"},
     ]
 
 
@@ -1235,12 +1235,12 @@ Rules:
 - This is for educational paper trading only, not real financial advice"""
 
     try:
-        response = _ai_client.messages.create(
-            model="claude-opus-4-6",
+        response = _ai_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
             max_tokens=900,
             messages=[{"role": "user", "content": prompt}]
         )
-        text = response.content[0].text.strip()
+        text = response.choices[0].message.content.strip()
         start = text.find("[")
         end   = text.rfind("]") + 1
         signals = json.loads(text[start:end])
@@ -1451,7 +1451,7 @@ def api_autopilot_run():
         if not row or not row["autopilot"]:
             return jsonify({"ok": False, "message": "Autopilot is off — enable it first using the toggle button"}), 400
         if not _ai_client:
-            return jsonify({"ok": False, "message": "No Anthropic API key — add ANTHROPIC_API_KEY to Railway variables"}), 400
+            return jsonify({"ok": False, "message": "No Groq API key — add GROQ_API_KEY to Railway variables"}), 400
         results = _run_autopilot(user["id"], db)
         return jsonify({"ok": True, "trades": results})
     except RuntimeError as e:
@@ -1469,7 +1469,7 @@ def api_autopilot_cover_losses():
     Does NOT require autopilot to be enabled — available as a standalone action.
     """
     if not _ai_client:
-        return jsonify({"ok": False, "message": "No Anthropic API key — add ANTHROPIC_API_KEY to Railway variables"}), 400
+        return jsonify({"ok": False, "message": "No Groq API key — add GROQ_API_KEY to Railway variables"}), 400
     try:
         user = current_user()
         db   = get_db()
