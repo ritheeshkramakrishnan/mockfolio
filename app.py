@@ -7,6 +7,49 @@ import secrets
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 from functools import wraps
+from zoneinfo import ZoneInfo
+
+_ET_TZ = ZoneInfo("America/New_York")
+
+
+def _et_now() -> datetime:
+    return datetime.now(_ET_TZ)
+
+
+def _is_market_open() -> bool:
+    """True if NYSE is currently open: 9:30–16:00 ET, Mon–Fri (holidays not checked)."""
+    now = _et_now()
+    if now.weekday() >= 5:          # Sat=5, Sun=6
+        return False
+    open_t  = now.replace(hour=9,  minute=30, second=0, microsecond=0)
+    close_t = now.replace(hour=16, minute=0,  second=0, microsecond=0)
+    return open_t <= now < close_t
+
+
+def _is_weekday() -> bool:
+    return _et_now().weekday() < 5
+
+
+def _market_status() -> dict:
+    now = _et_now()
+    wd  = now.weekday()   # 0=Mon … 6=Sun
+    open_t  = now.replace(hour=9,  minute=30, second=0, microsecond=0)
+    close_t = now.replace(hour=16, minute=0,  second=0, microsecond=0)
+    is_open = (wd < 5) and (open_t <= now < close_t)
+    if wd >= 5:
+        status = "weekend"
+        label  = "Market Closed (Weekend)"
+    elif now < open_t:
+        status = "pre-market"
+        label  = f"Pre-Market — opens at 9:30 AM ET"
+    elif now >= close_t:
+        status = "after-hours"
+        label  = "After-Hours — market closed"
+    else:
+        status = "open"
+        label  = "Market Open"
+    return {"open": is_open, "status": status, "label": label,
+            "weekday": wd < 5, "et_time": now.strftime("%H:%M ET")}
 
 import requests
 from flask import (
@@ -399,6 +442,33 @@ def init_db():
     except Exception:
         try: db.rollback()
         except: pass
+    # pending orders — BUYs queued outside market hours, executed at next market open
+    try:
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS pending_orders (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id    INTEGER NOT NULL,
+                symbol     TEXT NOT NULL,
+                qty        REAL NOT NULL,
+                reasoning  TEXT,
+                queued_at  TEXT DEFAULT (datetime('now')),
+                status     TEXT DEFAULT 'pending'
+            )
+        """ if not USE_POSTGRES else """
+            CREATE TABLE IF NOT EXISTS pending_orders (
+                id         SERIAL PRIMARY KEY,
+                user_id    INTEGER NOT NULL,
+                symbol     TEXT NOT NULL,
+                qty        REAL NOT NULL,
+                reasoning  TEXT,
+                queued_at  TEXT DEFAULT CURRENT_TIMESTAMP,
+                status     TEXT DEFAULT 'pending'
+            )
+        """)
+        db.commit()
+    except Exception:
+        try: db.rollback()
+        except: pass
     _import_backup(db)
     _cleanup_snapshots(db)
     db.close()
@@ -439,16 +509,99 @@ def _autopilot_today_pnl(user_id: int, db) -> float:
         return 0.0
 
 
+def _process_pending_orders(user_id: int, db) -> list:
+    """Execute queued BUY orders at market open. Called once per day when market opens."""
+    orders = db.execute(
+        "SELECT * FROM pending_orders WHERE user_id=? AND status='pending' ORDER BY queued_at ASC",
+        (user_id,)
+    ).fetchall()
+    if not orders:
+        return []
+
+    user_row = db.execute("SELECT balance FROM users WHERE id=?", (user_id,)).fetchone()
+    if not user_row:
+        return []
+    balance = float(user_row["balance"])
+    log_entries = []
+
+    for order in orders:
+        symbol = order["symbol"].upper()
+        qty    = float(order["qty"])
+        reason = (order["reasoning"] or "") + " [Queued order — executed at market open]"
+        try:
+            price, _ = _get_price(symbol)
+        except Exception:
+            db.execute("UPDATE pending_orders SET status='failed' WHERE id=?", (order["id"],))
+            continue
+        cost = price * qty
+        if balance < cost:
+            db.execute("UPDATE pending_orders SET status='skipped' WHERE id=?", (order["id"],))
+            log_entries.append({"action": "SKIP", "symbol": symbol, "qty": qty,
+                                "reasoning": f"Skipped queued BUY {symbol}: insufficient balance (need ${cost:.2f}, have ${balance:.2f})"})
+            continue
+        open_count = db.execute(
+            "SELECT COUNT(*) as n FROM positions WHERE user_id=?", (user_id,)
+        ).fetchone()["n"]
+        if open_count >= 6:
+            db.execute("UPDATE pending_orders SET status='skipped' WHERE id=?", (order["id"],))
+            log_entries.append({"action": "SKIP", "symbol": symbol, "qty": qty,
+                                "reasoning": f"Skipped queued BUY {symbol}: max 6 positions reached"})
+            continue
+        db.execute("UPDATE users SET balance=balance-? WHERE id=?", (cost, user_id))
+        pos = db.execute(
+            "SELECT * FROM positions WHERE user_id=? AND symbol=? AND side='long'",
+            (user_id, symbol)
+        ).fetchone()
+        if pos:
+            new_qty = pos["qty"] + qty
+            new_avg = (pos["avg_price"] * pos["qty"] + price * qty) / new_qty
+            db.execute("UPDATE positions SET qty=?, avg_price=? WHERE id=?", (new_qty, new_avg, pos["id"]))
+        else:
+            db.execute(
+                "INSERT INTO positions (user_id,symbol,qty,avg_price,side) VALUES (?,?,?,?,'long')",
+                (user_id, symbol, qty, price)
+            )
+        db.execute(
+            "INSERT INTO trades (user_id,symbol,qty,price,side,pnl,source,ai_reasoning) VALUES (?,?,?,?,'buy',0,'autopilot',?)",
+            (user_id, symbol, qty, price, reason)
+        )
+        db.execute(
+            "INSERT INTO autopilot_log (user_id,action,symbol,qty,price,reasoning) VALUES (?,?,?,?,?,?)",
+            (user_id, "BUY", symbol, qty, price, reason)
+        )
+        db.execute("UPDATE pending_orders SET status='executed' WHERE id=?", (order["id"],))
+        balance -= cost
+        log_entries.append({"action": "BUY", "symbol": symbol, "qty": qty, "reasoning": reason})
+
+    if log_entries:
+        _record_snapshot(user_id, db)
+        _check_phase(user_id, db)
+        db.commit()
+        _export_backup(db)
+    return log_entries
+
+
 def _run_autopilot(user_id: int, db, mode: str = "standard") -> list:
     """
-    Claude analyzes the portfolio and market, then executes trades automatically.
+    AI analyzes the portfolio and market, then executes trades automatically.
     mode: "standard" — normal autopilot
           "cover_losses" — defensive recovery: sell losers, buy safe assets
+    Market rules enforced:
+      - SELLs only execute during market hours (9:30–16:00 ET, Mon–Fri)
+      - BUYs outside market hours are queued as pending orders
+      - On weekends, only BUYs are queued; SELLs are blocked entirely
+      - Queued BUYs are processed at next market open via _process_pending_orders
     Respects autopilot_budget (ring-fenced capital) and autopilot_daily_loss_limit.
     Returns a list of log entries for what was done.
     """
     if not _ai_client:
         return []
+
+    mkt = _market_status()
+    market_open   = mkt["open"]       # True only during 9:30–16:00 ET Mon–Fri
+    is_weekday    = mkt["weekday"]    # Mon–Fri regardless of time
+    queue_buys    = not market_open   # outside hours → queue BUYs instead of executing
+    allow_sells   = market_open       # SELLs only during live market hours
 
     try:
         user_row = db.execute(
@@ -587,15 +740,17 @@ MARKET PRICES:
 RECENT NEWS:
 {headlines}
 
+MARKET STATUS: {mkt['label']}
+{"BUYs will be QUEUED for next market open — do NOT suggest SELLs." if not market_open else "Market is OPEN — BUYs and SELLs execute immediately."}
+
 RULES:
 - Max {max_pct*100:.0f}% of available capital per single buy trade
 - Max 6 open positions total
-- You MUST make at least one BUY or SELL trade — do not return only HOLD
-- If you have open positions, consider selling the weakest one
+- You MUST suggest at least one BUY{"" if not market_open else " or SELL"} — do not return only HOLD
+- {"ONLY suggest BUYs — no SELLs while market is closed" if not market_open else "If you have open positions, consider selling the weakest one"}
 - If no open positions, buy the most promising symbol from the watchlist
-- Market hours do not apply here — execute regardless
 
-You MUST include at least one BUY or SELL. Respond ONLY with valid JSON:
+You MUST include at least one BUY{"" if not market_open else " or SELL"}. Respond ONLY with valid JSON:
 [
   {{"action": "BUY", "symbol": "AAPL", "qty": 5, "reasoning": "Strong momentum..."}},
   {{"action": "SELL", "symbol": "TSLA", "qty": 2, "reasoning": "Overbought..."}}
@@ -656,6 +811,24 @@ You MUST include at least one BUY or SELL. Respond ONLY with valid JSON:
             if cost > max_spend:
                 qty = max(1, int(max_spend / price))
                 cost = price * qty
+
+            if queue_buys:
+                # Outside market hours — queue the order for next market open
+                db.execute(
+                    "INSERT INTO pending_orders (user_id,symbol,qty,reasoning) VALUES (?,?,?,?)",
+                    (user_id, symbol, qty, reason)
+                )
+                action = "QUEUED"
+                log_action = "QUEUED"
+                db.execute(
+                    "INSERT INTO autopilot_log (user_id,action,symbol,qty,price,reasoning) VALUES (?,?,?,?,?,?)",
+                    (user_id, "QUEUED", symbol, qty, None,
+                     f"[Queued for market open] {reason}")
+                )
+                log_entries.append({"action": "QUEUED", "symbol": symbol, "qty": qty,
+                                    "reasoning": f"[Queued for market open] {reason}"})
+                continue
+
             open_count = db.execute(
                 "SELECT COUNT(*) as n FROM positions WHERE user_id=?", (user_id,)
             ).fetchone()["n"]
@@ -692,6 +865,17 @@ You MUST include at least one BUY or SELL. Respond ONLY with valid JSON:
                 executed_price = price
 
         elif action == "SELL" and symbol and qty > 0:
+            if not allow_sells:
+                # Market is closed — block all sells
+                db.execute(
+                    "INSERT INTO autopilot_log (user_id,action,symbol,qty,price,reasoning) VALUES (?,?,?,?,?,?)",
+                    (user_id, "BLOCKED", symbol, qty, None,
+                     f"SELL blocked: market is closed ({mkt['label']}). No sales outside trading hours.")
+                )
+                log_entries.append({"action": "BLOCKED", "symbol": symbol, "qty": qty,
+                                    "reasoning": f"SELL blocked: market is closed ({mkt['label']})"})
+                continue
+
             pos = db.execute(
                 "SELECT * FROM positions WHERE user_id=? AND symbol=? AND side='long'",
                 (user_id, symbol)
@@ -717,6 +901,9 @@ You MUST include at least one BUY or SELL. Respond ONLY with valid JSON:
                 )
                 balance += proceeds
                 executed_price = price
+
+        if action in ("QUEUED", "BLOCKED"):
+            continue
 
         # Cover losses mode: use a distinct log action so the feed can show a shield badge
         log_action = f"COVER_{action}" if (mode == "cover_losses" and action in ("BUY","SELL")) else action
@@ -947,11 +1134,28 @@ def _scan_ts_load() -> datetime | None:
     return None
 
 
+_market_just_opened: bool = False   # tracks whether we've processed pending orders today
+
+
 def _autopilot_scan_all():
-    """Run autopilot for every user who has it enabled. Called every 5 minutes."""
-    global _last_autopilot_scan
+    """
+    Run autopilot for every user who has it enabled. Called every 5 minutes.
+    Market rules:
+      - Only executes live trades during market hours (9:30–16:00 ET, Mon–Fri)
+      - Processes queued pending orders once at market open each weekday
+      - Skips entirely on weekends (users can still manually queue from the UI)
+    """
+    global _last_autopilot_scan, _market_just_opened
+
+    mkt = _market_status()
+
+    if not mkt["weekday"]:
+        print(f"[scheduler] weekend — skipping live scan ({mkt['et_time']})")
+        return
+
     if not _ai_client:
         return
+
     try:
         if USE_POSTGRES:
             db = _PgConn(_DB_URL)
@@ -960,27 +1164,48 @@ def _autopilot_scan_all():
             db.row_factory = sqlite3.Row
 
         users = db.execute("SELECT id FROM users WHERE autopilot=1").fetchall()
-        print(f"[scheduler] autopilot scan — {len(users)} user(s) enabled")
-        for u in users:
-            try:
-                _run_autopilot(u["id"], db)
-            except Exception as e:
-                print(f"[scheduler] user {u['id']} error: {e}")
-        _last_autopilot_scan = datetime.now()
-        _scan_ts_save(_last_autopilot_scan)
+
+        # ── process pending orders once at market open ────────────────────────
+        if mkt["open"] and not _market_just_opened:
+            _market_just_opened = True
+            print(f"[scheduler] market just opened — processing pending orders for {len(users)} user(s)")
+            for u in users:
+                try:
+                    entries = _process_pending_orders(u["id"], db)
+                    if entries:
+                        print(f"[scheduler] user {u['id']}: executed {len(entries)} pending order(s)")
+                except Exception as e:
+                    print(f"[scheduler] pending orders user {u['id']} error: {e}")
+        elif not mkt["open"]:
+            _market_just_opened = False   # reset so we process again next open
+
+        # ── live autopilot scan (market hours only) ───────────────────────────
+        if mkt["open"]:
+            print(f"[scheduler] autopilot scan — {len(users)} user(s) enabled ({mkt['et_time']})")
+            for u in users:
+                try:
+                    _run_autopilot(u["id"], db)
+                except Exception as e:
+                    print(f"[scheduler] user {u['id']} error: {e}")
+            _last_autopilot_scan = datetime.now()
+            _scan_ts_save(_last_autopilot_scan)
+        else:
+            print(f"[scheduler] market closed ({mkt['label']}) — skipping live trades")
+
         db.close()
     except Exception as e:
         print(f"[scheduler] scan failed: {e}")
 
-    # Refresh AI signals every 5 minutes (server-side, independent of any user's browser)
-    try:
-        print("[scheduler] refreshing AI signals…")
-        articles = _fetch_news(limit=20)
-        _signals_cache.clear()
-        _generate_signals(articles, force=True)
-        print("[scheduler] AI signals refreshed")
-    except Exception as e:
-        print(f"[scheduler] signals refresh failed: {e}")
+    # Refresh AI signals every 5 minutes on weekdays (market hours or pre-market)
+    if mkt["weekday"]:
+        try:
+            print("[scheduler] refreshing AI signals…")
+            articles = _fetch_news(limit=20)
+            _signals_cache.clear()
+            _generate_signals(articles, force=True)
+            print("[scheduler] AI signals refreshed")
+        except Exception as e:
+            print(f"[scheduler] signals refresh failed: {e}")
 
 
 def _start_scheduler():
@@ -1427,6 +1652,25 @@ def api_autopilot_status():
         "logs": [dict(l) for l in logs],
         "ai_available": bool(_ai_client),
     })
+
+
+@app.route("/api/market/status")
+@login_required
+def api_market_status():
+    return jsonify(_market_status())
+
+
+@app.route("/api/autopilot/pending")
+@login_required
+def api_autopilot_pending():
+    user = current_user()
+    db = get_db()
+    rows = db.execute(
+        "SELECT symbol, qty, reasoning, queued_at FROM pending_orders "
+        "WHERE user_id=? AND status='pending' ORDER BY queued_at ASC",
+        (user["id"],)
+    ).fetchall()
+    return jsonify([dict(r) for r in rows])
 
 
 @app.route("/api/autopilot/toggle", methods=["POST"])

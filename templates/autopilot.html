@@ -48,6 +48,18 @@
       </div>
     </div>
 
+    <!-- Market status pill -->
+    <div id="marketStatusBar" style="display:flex;align-items:center;gap:.75rem;padding:.6rem 1.1rem;border-radius:12px;margin-bottom:.75rem;background:var(--surface);border:1px solid var(--border);font-size:.83rem;">
+      <span id="marketDot" style="width:9px;height:9px;border-radius:50%;background:var(--muted);display:inline-block;flex-shrink:0;"></span>
+      <span id="marketLabel" style="color:var(--muted);">Checking market hours…</span>
+      <span id="marketTime" style="color:var(--muted);margin-left:auto;font-size:.76rem;"></span>
+    </div>
+
+    <!-- Pending orders notice (shown outside market hours) -->
+    <div id="pendingBanner" style="display:none;padding:.7rem 1.1rem;border-radius:12px;margin-bottom:.75rem;background:rgba(255,180,0,.1);border:1px solid rgba(255,180,0,.25);font-size:.83rem;color:var(--gold);">
+      🕐 <b id="pendingCount">0</b> BUY order(s) queued — will execute when market opens Monday at 9:30 AM ET
+    </div>
+
     <!-- Status banner -->
     <div id="statusBanner" style="display:none;padding:.75rem 1.1rem;border-radius:12px;margin-bottom:.75rem;font-size:.85rem;font-weight:600;"></div>
 
@@ -409,6 +421,10 @@ function renderFeed(logs) {
       badgeColor = 'rgba(126,200,80,.15)'; badgeText = 'var(--accent)'; badgeLabel = action;
     } else if (action === 'SELL') {
       badgeColor = 'rgba(255,180,0,.15)'; badgeText = 'var(--gold)'; badgeLabel = action;
+    } else if (action === 'QUEUED') {
+      badgeColor = 'rgba(100,160,255,.15)'; badgeText = '#7ab4ff'; badgeLabel = '🕐 QUEUED';
+    } else if (action === 'BLOCKED') {
+      badgeColor = 'rgba(255,100,100,.12)'; badgeText = 'var(--red)'; badgeLabel = '🚫 BLOCKED';
     } else {
       badgeColor = 'rgba(255,255,255,.06)'; badgeText = 'var(--muted)'; badgeLabel = action;
     }
@@ -475,6 +491,63 @@ function tickScanCountdown() {
 
 setInterval(tickScanCountdown, 1000);
 setInterval(loadScanStatus, 60_000); // re-sync every minute
+
+// ── Market status + pending orders ────────────────────────────────────────────
+async function loadMarketStatus() {
+  try {
+    const [mktR, pendR] = await Promise.all([
+      fetch('/api/market/status'),
+      fetch('/api/autopilot/pending'),
+    ]);
+    const mkt  = await mktR.json();
+    const pend = pendR.ok ? await pendR.json() : [];
+
+    const dot   = document.getElementById('marketDot');
+    const label = document.getElementById('marketLabel');
+    const time  = document.getElementById('marketTime');
+
+    if (mkt.open) {
+      dot.style.background = 'var(--accent)';
+      dot.style.boxShadow  = '0 0 6px var(--accent)';
+      label.style.color    = 'var(--accent)';
+    } else if (mkt.status === 'weekend') {
+      dot.style.background = 'var(--muted)';
+      dot.style.boxShadow  = 'none';
+      label.style.color    = 'var(--muted)';
+    } else {
+      dot.style.background = 'var(--gold)';
+      dot.style.boxShadow  = 'none';
+      label.style.color    = 'var(--gold)';
+    }
+    label.textContent = mkt.label;
+    if (time) time.textContent = mkt.et_time;
+
+    // Pending orders banner
+    const pb = document.getElementById('pendingBanner');
+    if (pend.length > 0) {
+      document.getElementById('pendingCount').textContent = pend.length;
+      const isWeekend = mkt.status === 'weekend';
+      pb.innerHTML = `🕐 <b>${pend.length}</b> BUY order(s) queued — will execute at next market open` +
+        (isWeekend ? ' (Monday 9:30 AM ET)' : ' (9:30 AM ET)');
+      pb.style.display = 'block';
+    } else {
+      pb.style.display = 'none';
+    }
+
+    // Disable Run Now + Cover Losses outside market hours
+    const runBtn = document.getElementById('runNowBtn');
+    if (runBtn) {
+      if (!mkt.open) {
+        runBtn.title = `Market closed (${mkt.label}) — BUYs will be queued, SELLs blocked`;
+      } else {
+        runBtn.title = '';
+      }
+    }
+  } catch(e) {}
+}
+
+loadMarketStatus();
+setInterval(loadMarketStatus, 60_000);
 
 // ── Cover Losses button state ─────────────────────────────────────────────────
 function updateCoverLossesBtn() {
