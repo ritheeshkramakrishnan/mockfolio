@@ -768,7 +768,12 @@ You MUST include at least one BUY{"" if not market_open else " or SELL"}. Respon
         decisions = json.loads(raw[start:end]) if start != -1 else []
     except Exception as e:
         print(f"[autopilot] AI error: {e}")
-        # Propagate so the API endpoint can surface the real message
+        err_str = str(e)
+        if "429" in err_str or "rate_limit_exceeded" in err_str:
+            import re
+            m = re.search(r"try again in ([\d]+m[\d.]+s|[\d.]+s)", err_str)
+            wait = f" Try again in {m.group(1)}." if m else " You've used your daily token quota — try again later."
+            raise RuntimeError(f"Groq daily token limit reached.{wait}")
         raise RuntimeError(f"AI call failed: {e}")
 
     # ── hard fallback: if Claude returned only HOLDs, force a trade ──────────
