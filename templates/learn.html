@@ -10,7 +10,7 @@
   <style>
     .tab-list{display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:1.5rem;border-bottom:1px solid var(--border);padding-bottom:.75rem;}
     .tab-btn{padding:.45rem 1rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-size:.83rem;font-weight:600;transition:all .15s;}
-    .tab-btn.active{background:rgba(34,197,94,.12);border-color:var(--accent);color:var(--accent);}
+    .tab-btn.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);}
     .tab-pane{display:none;}.tab-pane.active{display:block;}
     .qm-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.5rem;margin-bottom:1.25rem;}
     .qm-def{font-size:.95rem;color:var(--text);line-height:1.7;margin-bottom:1rem;}
@@ -20,10 +20,10 @@
     .calc-row{display:flex;gap:.75rem;align-items:flex-end;flex-wrap:wrap;margin:.75rem 0;}
     .calc-field{display:flex;flex-direction:column;gap:.25rem;min-width:110px;}
     .calc-field label{font-size:.75rem;color:var(--muted);}
-    .calc-result{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.25);border-radius:10px;padding:.75rem 1rem;font-size:.95rem;font-weight:700;color:var(--green);margin-top:.75rem;}
+    .calc-result{background:var(--accent-dim);border:1px solid var(--accent-brd);border-radius:10px;padding:.75rem 1rem;font-size:.95rem;font-weight:700;color:var(--green);margin-top:.75rem;}
     .ai-chat{display:flex;flex-direction:column;height:420px;}
     .ai-msgs{flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:.75rem;}
-    .msg-user{align-self:flex-end;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.2);border-radius:12px 12px 2px 12px;padding:.6rem 1rem;max-width:80%;font-size:.88rem;}
+    .msg-user{align-self:flex-end;background:var(--accent-dim);border:1px solid var(--accent-brd);border-radius:12px 12px 2px 12px;padding:.6rem 1rem;max-width:80%;font-size:.88rem;}
     .msg-bot{align-self:flex-start;background:var(--surface);border:1px solid var(--border);border-radius:12px 12px 12px 2px;padding:.6rem 1rem;max-width:85%;font-size:.88rem;line-height:1.6;}
     .ai-input-row{display:flex;gap:.5rem;padding:.75rem 0 0;}
     .section-tag{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.25rem;}
@@ -545,7 +545,7 @@ async function runMC(){
   mcChart=new Chart(ctx,{
     type:'line',
     data:{labels,datasets:d.sample_paths.slice(0,30).map(path=>({
-      data:path,borderWidth:1,borderColor:'rgba(34,197,94,0.15)',
+      data:path,borderWidth:1,borderColor:'rgba(22,199,132,0.15)',
       backgroundColor:'transparent',pointRadius:0,tension:0.3
     }))},
     options:{responsive:true,maintainAspectRatio:false,

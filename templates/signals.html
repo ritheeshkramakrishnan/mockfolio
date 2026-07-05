@@ -19,8 +19,8 @@
     .sig-header { display: flex; align-items: center; gap: .75rem; margin-bottom: .75rem; }
     .sig-ticker { font-size: 1.35rem; font-weight: 800; color: var(--cream); }
     .sig-dir { font-size: .75rem; font-weight: 700; padding: .25rem .65rem; border-radius: 6px; letter-spacing: .05em; }
-    .sig-dir.buy  { background: rgba(34,197,94,.15); color: var(--green); }
-    .sig-dir.sell { background: rgba(248,113,113,.15); color: var(--red); }
+    .sig-dir.buy  { background: rgba(22,199,132,.15); color: var(--green); }
+    .sig-dir.sell { background: rgba(234,57,67,.15); color: var(--red); }
     .sig-conf { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; }
     .conf-bar { width: 80px; height: 6px; background: var(--border); border-radius: 3px; margin-top: 4px; }
     .conf-fill { height: 100%; border-radius: 3px; }
@@ -29,7 +29,7 @@
     .sig-meta-item .lbl { color: var(--muted); margin-bottom: .1rem; }
     .sig-meta-item .val { color: var(--text); font-weight: 600; }
     .sig-thesis { font-size: .88rem; color: var(--text); margin-bottom: .5rem; line-height: 1.5; }
-    .sig-risk { font-size: .8rem; color: #f59e0b; background: rgba(245,158,11,.08);
+    .sig-risk { font-size: .8rem; color: var(--gold); background: rgba(240,185,11,.08);
                 border-radius: 8px; padding: .5rem .75rem; margin-bottom: .75rem; }
     .sig-trigger { font-size: .75rem; color: var(--muted); font-style: italic; margin-bottom: .85rem;
                    padding-left: .75rem; border-left: 2px solid var(--border); }
@@ -39,7 +39,7 @@
       border-radius: 10px; padding: .9rem 1rem; margin-bottom: .75rem;
       transition: border-color .15s;
     }
-    .news-card:hover { border-color: rgba(34,197,94,.3); }
+    .news-card:hover { border-color: var(--accent-brd); }
     .news-source { font-size: .7rem; color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
     .news-title { font-size: .88rem; color: var(--text); font-weight: 600; margin: .25rem 0 .3rem; line-height: 1.4; }
     .news-title a { color: inherit; text-decoration: none; }
@@ -139,9 +139,9 @@
 const fmt = n => '$' + parseFloat(n).toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2});
 
 function confColor(c) {
-  if (c >= 70) return '#22c55e';
-  if (c >= 50) return '#f59e0b';
-  return '#f87171';
+  if (c >= 70) return '#16c784';
+  if (c >= 50) return '#f0b90b';
+  return '#ea3943';
 }
 
 function renderSignal(s) {
@@ -210,11 +210,11 @@ async function loadSignals() {
     const dot = document.getElementById('statusDot');
     const statusEl = document.getElementById('statusText');
     if (data.live_news) {
-      dot.style.background = '#22c55e';
-      statusEl.innerHTML = `<span style="color:#22c55e;">● LIVE</span> — ${data.news_count} news articles · AI analysis by QuantBot`;
+      dot.style.background = '#16c784';
+      statusEl.innerHTML = `<span style="color:var(--green);">● LIVE</span> — ${data.news_count} news articles · AI analysis by QuantBot`;
     } else {
-      dot.style.background = '#f59e0b';
-      statusEl.innerHTML = `<span style="color:#f59e0b;">◐ Demo signals</span> — Add API keys for live analysis`;
+      dot.style.background = '#f0b90b';
+      statusEl.innerHTML = `<span style="color:var(--gold);">◐ Demo signals</span> — Add API keys for live analysis`;
     }
     document.getElementById('genTime').textContent = data.generated_at || '—';
     document.getElementById('sigCount').textContent = `${(data.signals||[]).length} signals`;

@@ -56,7 +56,7 @@
     </div>
 
     <!-- Pending orders notice (shown outside market hours) -->
-    <div id="pendingBanner" style="display:none;padding:.7rem 1.1rem;border-radius:12px;margin-bottom:.75rem;background:rgba(255,180,0,.1);border:1px solid rgba(255,180,0,.25);font-size:.83rem;color:var(--gold);">
+    <div id="pendingBanner" style="display:none;padding:.7rem 1.1rem;border-radius:12px;margin-bottom:.75rem;background:rgba(240,185,11,.1);border:1px solid rgba(240,185,11,.25);font-size:.83rem;color:var(--gold);">
       🕐 <b id="pendingCount">0</b> BUY order(s) queued — will execute when market opens Monday at 9:30 AM ET
     </div>
 
@@ -240,9 +240,9 @@ async function loadStats() {
     banner.textContent = '⚠️ No Groq API key configured — autopilot requires a GROQ_API_KEY to make decisions.';
   } else if (res.paused_today) {
     banner.style.display = 'block';
-    banner.style.background = 'rgba(255,180,0,.12)';
+    banner.style.background = 'rgba(240,185,11,.12)';
     banner.style.color = 'var(--gold)';
-    banner.style.border = '1px solid rgba(255,180,0,.25)';
+    banner.style.border = '1px solid rgba(240,185,11,.25)';
     banner.textContent = `🛑 Daily loss limit hit (${fmt(Math.abs(res.today_pnl))} lost today, limit ${fmt(res.daily_loss_limit)}). Autopilot paused until tomorrow.`;
   } else if (res.enabled) {
     banner.style.display = 'block';
@@ -420,7 +420,7 @@ function renderFeed(logs) {
     } else if (action === 'BUY') {
       badgeColor = 'rgba(126,200,80,.15)'; badgeText = 'var(--accent)'; badgeLabel = action;
     } else if (action === 'SELL') {
-      badgeColor = 'rgba(255,180,0,.15)'; badgeText = 'var(--gold)'; badgeLabel = action;
+      badgeColor = 'rgba(240,185,11,.15)'; badgeText = 'var(--gold)'; badgeLabel = action;
     } else if (action === 'QUEUED') {
       badgeColor = 'rgba(100,160,255,.15)'; badgeText = '#7ab4ff'; badgeLabel = '🕐 QUEUED';
     } else if (action === 'BLOCKED') {

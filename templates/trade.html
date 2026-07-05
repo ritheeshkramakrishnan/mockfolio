@@ -12,13 +12,13 @@
     .symbol-bar { display:flex;gap:.75rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap; }
     .symbol-chips { display:flex;gap:.4rem;flex-wrap:wrap; }
     .chip { font-size:.75rem;padding:.25rem .65rem;border-radius:6px;border:1px solid var(--border);color:var(--muted);cursor:pointer;transition:all .15s;background:var(--surface); }
-    .chip:hover,.chip.active { border-color:var(--accent);color:var(--accent);background:rgba(34,197,94,.08); }
+    .chip:hover,.chip.active { border-color:var(--accent);color:var(--accent);background:var(--accent-dim); }
     .style-bar { display:flex;gap:.35rem;align-items:center;margin-bottom:.6rem;flex-wrap:wrap; }
     .style-btn { font-size:.75rem;padding:.28rem .7rem;border-radius:6px;border:1px solid var(--border);color:var(--muted);cursor:pointer;background:var(--surface);transition:all .15s;display:flex;align-items:center;gap:.3rem; }
-    .style-btn:hover,.style-btn.active { border-color:var(--accent);color:var(--accent);background:rgba(34,197,94,.08); }
+    .style-btn:hover,.style-btn.active { border-color:var(--accent);color:var(--accent);background:var(--accent-dim); }
     .style-label { font-size:.72rem;color:var(--muted);margin-right:.2rem;font-weight:600; }
     .interval-btn { font-size:.72rem;padding:.25rem .55rem;border-radius:5px;border:1px solid var(--border);color:var(--muted);cursor:pointer;background:var(--surface);transition:all .15s; }
-    .interval-btn:hover,.interval-btn.active { border-color:rgba(34,197,94,.5);color:var(--accent);background:rgba(34,197,94,.06); }
+    .interval-btn:hover,.interval-btn.active { border-color:var(--accent-brd);color:var(--accent);background:var(--accent-dim); }
   </style>
 </head>
 <body>
@@ -167,25 +167,25 @@ function createChart(sym){
     container_id:"tradingview_chart",autosize:true,
     symbol:buildTVSymbol(sym),interval:currentInterval,
     timezone:"America/New_York",theme:"dark",style:currentStyle,locale:"en",
-    toolbar_bg:"#0c110a",enable_publishing:false,allow_symbol_change:true,
+    toolbar_bg:"#0b0e14",enable_publishing:false,allow_symbol_change:true,
     watchlist:["NASDAQ:AAPL","NASDAQ:TSLA","NASDAQ:NVDA","AMEX:SPY","NASDAQ:QQQ",
                "NASDAQ:MSFT","NASDAQ:META","NASDAQ:AMZN","NASDAQ:GOOGL"],
     details:true,hotlist:false,calendar:false,
     studies:["RSI@tv-basicstudies","MACD@tv-basicstudies","BB@tv-basicstudies"],
     show_popup_button:true,popup_width:"1000",popup_height:"650",
     overrides:{
-      "paneProperties.background":"#060a04",
+      "paneProperties.background":"#07090d",
       "paneProperties.backgroundType":"solid",
-      "paneProperties.vertGridProperties.color":"#1c2e17",
-      "paneProperties.horzGridProperties.color":"#1c2e17",
-      "scalesProperties.textColor":"#7a8f6e",
-      "scalesProperties.lineColor":"#1c2e17",
-      "mainSeriesProperties.candleStyle.upColor":"#22c55e",
-      "mainSeriesProperties.candleStyle.downColor":"#f87171",
-      "mainSeriesProperties.candleStyle.borderUpColor":"#22c55e",
-      "mainSeriesProperties.candleStyle.borderDownColor":"#f87171",
-      "mainSeriesProperties.candleStyle.wickUpColor":"#22c55e",
-      "mainSeriesProperties.candleStyle.wickDownColor":"#f87171",
+      "paneProperties.vertGridProperties.color":"#1b2230",
+      "paneProperties.horzGridProperties.color":"#1b2230",
+      "scalesProperties.textColor":"#8a94a6",
+      "scalesProperties.lineColor":"#1b2230",
+      "mainSeriesProperties.candleStyle.upColor":"#16c784",
+      "mainSeriesProperties.candleStyle.downColor":"#ea3943",
+      "mainSeriesProperties.candleStyle.borderUpColor":"#16c784",
+      "mainSeriesProperties.candleStyle.borderDownColor":"#ea3943",
+      "mainSeriesProperties.candleStyle.wickUpColor":"#16c784",
+      "mainSeriesProperties.candleStyle.wickDownColor":"#ea3943",
     }
   });
 }
@@ -204,9 +204,9 @@ async function refreshPrice(sym){
   try{
     const q=await fetch('/api/quote/'+sym).then(r=>r.json());
     if(!q.error){
-      const src=q.source?.includes('live')?'<span style="color:#22c55e;font-size:.7rem;">● LIVE</span>':
-                q.source?.includes('EOD')?'<span style="color:#f59e0b;font-size:.7rem;">◐ EOD</span>':
-                '<span style="color:#64748b;font-size:.7rem;">~ Sim</span>';
+      const src=q.source?.includes('live')?'<span style="color:var(--green);font-size:.7rem;">● LIVE</span>':
+                q.source?.includes('EOD')?'<span style="color:var(--gold);font-size:.7rem;">◐ EOD</span>':
+                '<span style="color:var(--muted);font-size:.7rem;">~ Sim</span>';
       document.getElementById('currentPriceDisplay').innerHTML=
         '<b style="color:var(--accent);font-size:1.1rem;">'+fmt(q.price)+'</b> '+sym+' '+src;
     }

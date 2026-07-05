@@ -280,8 +280,9 @@ async function loadChart() {
     pnlEl.textContent = (isUp ? '+' : '') + fmt(gain) + ' (' + (isUp ? '+' : '') + gainPct + '%)';
     pnlEl.style.color = isUp ? 'var(--accent)' : 'var(--red)';
 
-    const lineColor = isUp ? '#7ec850' : '#d45f5f';
-    const fillColor = isUp ? 'rgba(126,200,80,0.08)' : 'rgba(212,95,95,0.08)';
+    const css = getComputedStyle(document.documentElement);
+    const lineColor = (isUp ? css.getPropertyValue('--green') : css.getPropertyValue('--red')).trim() || (isUp ? '#16c784' : '#ea3943');
+    const fillColor = isUp ? 'rgba(22,199,132,0.08)' : 'rgba(234,57,67,0.08)';
 
     const ctx = document.getElementById('priceChart').getContext('2d');
     new Chart(ctx, {
@@ -328,8 +329,8 @@ async function loadChart() {
           }
         },
         scales: {
-          x: { grid: { color: 'rgba(255,255,255,.04)' }, ticks: { color: '#7a9b6e', maxTicksLimit: 8, maxRotation: 0 } },
-          y: { grid: { color: 'rgba(255,255,255,.04)' }, ticks: { color: '#7a9b6e', callback: v => '$'+v.toLocaleString() } }
+          x: { grid: { color: 'rgba(255,255,255,.04)' }, ticks: { color: '#8a94a6', maxTicksLimit: 8, maxRotation: 0 } },
+          y: { grid: { color: 'rgba(255,255,255,.04)' }, ticks: { color: '#8a94a6', callback: v => '$'+v.toLocaleString() } }
         }
       }
     });

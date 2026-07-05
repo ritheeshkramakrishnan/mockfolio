@@ -411,7 +411,8 @@ textarea.input { font-family: var(--font); }
   -webkit-tap-highlight-color: transparent; transition: color .15s;
 }
 #mobileNav a.active, #mobileNav button.active { color: var(--accent); }
-#mobileNav .mnav-icon { font-size: 1.3rem; line-height: 1; }
+#mobileNav .mnav-icon { font-size: 1.3rem; line-height: 1; filter: grayscale(1) brightness(1.6); opacity: .8; }
+#mobileNav a.active .mnav-icon, #mobileNav button.active .mnav-icon { filter: none; opacity: 1; }
 
 #mobileMoreOverlay {
   display: none; position: fixed; inset: 0; z-index: 299;
