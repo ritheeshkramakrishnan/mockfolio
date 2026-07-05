@@ -452,6 +452,9 @@ textarea.input { font-family: var(--font); }
   nav { padding: 0 1rem; height: 56px; }
   nav .nav-logo { font-size: 1.1rem; }
   #marketBadge { display: none !important; }
+  .nav-links { gap: .75rem; }
+  .nav-links a:not(.btn) { display: none; }
+  .nav-links .btn { padding: .4rem .8rem; font-size: .82rem; }
 
   /* sidebar → bottom nav */
   .sidebar { display: none; }
