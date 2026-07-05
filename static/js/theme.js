@@ -8,6 +8,7 @@
 
   // ── palette generation ───────────────────────────────────────────────────────
   const PRESETS = [
+    { name: 'Terminal', hue: 158 },
     { name: 'Forest',  hue: 105 },
     { name: 'Pink',    hue: 330 },
     { name: 'Purple',  hue: 270 },
@@ -18,23 +19,41 @@
     { name: 'Gold',    hue: 45  },
   ];
 
+  const DEFAULT_HUE = 158; // matches stylesheet terminal green
+
   function applyHue(hue) {
     const r = document.documentElement;
-    r.style.setProperty('--bg',      `hsl(${hue},40%,4%)`);
-    r.style.setProperty('--surface', `hsl(${hue},35%,6%)`);
-    r.style.setProperty('--card',    `hsl(${hue},32%,8%)`);
-    r.style.setProperty('--border',  `hsl(${hue},28%,15%)`);
-    r.style.setProperty('--accent',  `hsl(${hue},70%,62%)`);
-    r.style.setProperty('--green',   `hsl(${hue},60%,55%)`);
-    r.style.setProperty('--muted',   `hsl(${hue},20%,48%)`);
+    // Keep backgrounds neutral slate; only tint accents.
+    r.style.setProperty('--bg',      `hsl(${hue},18%,4%)`);
+    r.style.setProperty('--surface', `hsl(${hue},15%,6%)`);
+    r.style.setProperty('--card',    `hsl(${hue},14%,8%)`);
+    r.style.setProperty('--border',  `hsl(${hue},14%,15%)`);
+    r.style.setProperty('--accent',  `hsl(${hue},76%,55%)`);
+    r.style.setProperty('--accent-dim', `hsla(${hue},76%,55%,.10)`);
+    r.style.setProperty('--accent-brd', `hsla(${hue},76%,55%,.32)`);
+    r.style.setProperty('--muted',   `hsl(${hue},10%,58%)`);
+  }
+
+  function clearHue() {
+    const r = document.documentElement;
+    ['--bg','--surface','--card','--border','--accent','--accent-dim','--accent-brd','--muted']
+      .forEach(v => r.style.removeProperty(v));
   }
 
   function saveHue(h) { try { localStorage.setItem('mf_hue', h); } catch (_) {} }
-  function loadHue()   { try { return parseInt(localStorage.getItem('mf_hue') || '105', 10); } catch (_) { return 105; } }
+  function clearSavedHue() { try { localStorage.removeItem('mf_hue'); } catch (_) {} }
+  function loadHue() {
+    try {
+      const v = localStorage.getItem('mf_hue');
+      return v === null ? null : parseInt(v, 10);
+    } catch (_) { return null; }
+  }
 
-  // Apply immediately (before DOM renders to prevent flash)
-  let _hue = loadHue();
-  applyHue(_hue);
+  // Apply immediately (before DOM renders to prevent flash).
+  // No saved hue → use the stylesheet's default palette untouched.
+  let _saved = loadHue();
+  let _hue = _saved === null ? DEFAULT_HUE : _saved;
+  if (_saved !== null) applyHue(_hue);
 
   // ── color wheel (canvas) ─────────────────────────────────────────────────────
   const WHEEL_SIZE = 200;
@@ -182,7 +201,7 @@
 
       <!-- reset -->
       <button id="themeReset" style="width:100%;padding:.4rem;background:none;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:.78rem;cursor:pointer;transition:all .2s;">
-        Reset to Default Green
+        Reset to Default
       </button>
     `;
 
@@ -233,8 +252,8 @@
 
     function refresh() {
       const { isOpen, nextLabel } = marketStatus();
-      badge.style.background   = isOpen ? 'rgba(126,200,80,.12)' : 'rgba(255,255,255,.05)';
-      badge.style.borderColor  = isOpen ? 'rgba(126,200,80,.35)' : 'rgba(255,255,255,.12)';
+      badge.style.background   = isOpen ? 'var(--accent-dim)' : 'rgba(255,255,255,.05)';
+      badge.style.borderColor  = isOpen ? 'var(--accent-brd)' : 'rgba(255,255,255,.12)';
       badge.style.color        = isOpen ? 'var(--accent)'        : 'var(--muted)';
       badge.innerHTML = `
         <span style="width:7px;height:7px;border-radius:50%;background:${isOpen ? 'var(--accent)' : 'var(--muted)'};
@@ -264,6 +283,10 @@
     if (document.getElementById('mobileNav')) return;
 
     const path = window.location.pathname.replace(/\/$/, '') || '/';
+
+    // Only show the app nav on app pages — not on the landing/auth pages.
+    const PUBLIC = ['/', '/login', '/register', '/forgot-password', '/reset-password'];
+    if (PUBLIC.some(p => path === p || (p !== '/' && path.startsWith(p)))) return;
 
     const PRIMARY = [
       { label: 'Home',      icon: '🏠', href: '/dashboard' },
@@ -428,7 +451,13 @@
 
     panel.querySelector('#themePanelClose').onclick = () => { panel.style.display = 'none'; };
     panel.querySelector('#themeReset').onclick = () => {
-      updateHue(105);
+      // Full reset: drop the override entirely and return to the stylesheet palette.
+      _hue = DEFAULT_HUE;
+      clearHue();
+      clearSavedHue();
+      slider.value = _hue;
+      hueVal.textContent = _hue + '°';
+      drawWheel(canvas, _hue);
       dotsWrap.querySelectorAll('.preset-dot').forEach((d, i) => {
         d.classList.toggle('active', i === 0);
       });
