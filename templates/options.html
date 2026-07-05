@@ -18,15 +18,15 @@
 
 <div class="app-layout">
   <aside class="sidebar">
-    <a href="/dashboard"><span class="icon">🏠</span> Dashboard</a>
-    <a href="/trade"><span class="icon">💹</span> Trade</a>
-    <a href="/options" class="active"><span class="icon">📊</span> Options</a>
-    <a href="/calls"><span class="icon">📡</span> Market Calls</a>
-    <a href="/signals"><span class="icon">🤖</span> AI Signals</a>
-    <a href="/autopilot"><span class="icon">🚀</span> Autopilot</a>
-    <a href="/activity"><span class="icon">📋</span> Activity Log</a>
-    <a href="/learn"><span class="icon">📚</span> AI Tutor</a>
-    <a href="/flashcards"><span class="icon">🃏</span> Flashcards</a>
+    <a href="/dashboard"><span class="icon icon-home"></span> Dashboard</a>
+    <a href="/trade"><span class="icon icon-trade"></span> Trade</a>
+    <a href="/options" class="active"><span class="icon icon-options"></span> Options</a>
+    <a href="/calls"><span class="icon icon-calls"></span> Market Calls</a>
+    <a href="/signals"><span class="icon icon-signals"></span> AI Signals</a>
+    <a href="/autopilot"><span class="icon icon-autopilot"></span> Autopilot</a>
+    <a href="/activity"><span class="icon icon-activity"></span> Activity Log</a>
+    <a href="/learn"><span class="icon icon-learn"></span> AI Tutor</a>
+    <a href="/flashcards"><span class="icon icon-cards"></span> Flashcards</a>
   </aside>
 
   <main class="main-content">
@@ -55,7 +55,7 @@
 
     <!-- Strategy builder -->
     <div class="card" style="padding:1.2rem 1.5rem;margin-top:.75rem;">
-      <div style="font-size:.85rem;font-weight:700;margin-bottom:.75rem;color:var(--text);">⚡ Strategy Builder</div>
+      <div style="font-size:.85rem;font-weight:700;margin-bottom:.75rem;color:var(--text);">Strategy Builder</div>
       <div style="display:flex;gap:.6rem;flex-wrap:wrap;" id="stratBtns">
         <button class="btn btn-secondary" onclick="openStrategy('straddle')">Straddle</button>
         <button class="btn btn-secondary" onclick="openStrategy('bull_call_spread')">Bull Call Spread</button>
@@ -216,7 +216,7 @@ async function executeTrade(side) {
   if (res.error) { errEl.textContent = res.error; errEl.style.display='block'; return; }
   closeModal();
   loadPositions();
-  alert(`✅ ${side.toUpperCase()} ${qty} contract(s) @ ${fmt(res.premium)} | New balance: ${fmt(res.new_balance)}`);
+  alert(`✓ ${side.toUpperCase()} ${qty} contract(s) @ ${fmt(res.premium)} | New balance: ${fmt(res.new_balance)}`);
 }
 
 async function loadPositions() {
@@ -276,7 +276,7 @@ async function executeStrategy(name) {
   if (res.error) { errEl.textContent = res.error; errEl.style.display='block'; return; }
   document.getElementById('stratPanel').style.display = 'none';
   loadPositions();
-  alert(`✅ ${name.replace(/_/g,' ')} executed. Net cost: ${fmt(res.net_cost)} | Balance: ${fmt(res.new_balance)}`);
+  alert(`✓ ${name.replace(/_/g,' ')} executed. Net cost: ${fmt(res.net_cost)} | Balance: ${fmt(res.new_balance)}`);
 }
 
 // init

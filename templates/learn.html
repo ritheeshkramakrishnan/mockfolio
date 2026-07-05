@@ -39,15 +39,15 @@
 </nav>
 <div class="app-layout">
   <aside class="sidebar">
-    <a href="/dashboard"><span class="icon">🏠</span> Dashboard</a>
-    <a href="/trade"><span class="icon">💹</span> Trade</a>
-    <a href="/options"><span class="icon">📊</span> Options</a>
-    <a href="/calls"><span class="icon">📡</span> Market Calls</a>
-    <a href="/signals"><span class="icon">🤖</span> AI Signals</a>
-    <a href="/autopilot"><span class="icon">🚀</span> Autopilot</a>
-    <a href="/activity"><span class="icon">📋</span> Activity Log</a>
-    <a href="/learn" class="active"><span class="icon">📚</span> AI Tutor</a>
-    <a href="/flashcards"><span class="icon">🃏</span> Flashcards</a>
+    <a href="/dashboard"><span class="icon icon-home"></span> Dashboard</a>
+    <a href="/trade"><span class="icon icon-trade"></span> Trade</a>
+    <a href="/options"><span class="icon icon-options"></span> Options</a>
+    <a href="/calls"><span class="icon icon-calls"></span> Market Calls</a>
+    <a href="/signals"><span class="icon icon-signals"></span> AI Signals</a>
+    <a href="/autopilot"><span class="icon icon-autopilot"></span> Autopilot</a>
+    <a href="/activity"><span class="icon icon-activity"></span> Activity Log</a>
+    <a href="/learn" class="active"><span class="icon icon-learn"></span> AI Tutor</a>
+    <a href="/flashcards"><span class="icon icon-cards"></span> Flashcards</a>
   </aside>
   <main class="main-content">
     <div class="section-head">
@@ -56,27 +56,27 @@
     </div>
 
     <div class="tab-list">
-      <button class="tab-btn active" onclick="switchTab('bot')">🤖 QuantBot AI</button>
-      <button class="tab-btn" onclick="switchTab('mc')">🎲 Monte Carlo</button>
-      <button class="tab-btn" onclick="switchTab('risk')">📊 Risk &amp; Performance</button>
-      <button class="tab-btn" onclick="switchTab('sizing')">💰 Position Sizing</button>
-      <button class="tab-btn" onclick="switchTab('theory')">📈 Market Theory</button>
-      <button class="tab-btn" onclick="switchTab('options')">📉 Options &amp; Greeks</button>
-      <button class="tab-btn" onclick="switchTab('portfolio')">🗂 Portfolio Theory</button>
-      <button class="tab-btn" onclick="switchTab('technical')">📐 Technical Methods</button>
-      <button class="tab-btn" onclick="switchTab('patterns')">🏔️ Chart Patterns</button>
+      <button class="tab-btn active" onclick="switchTab('bot')">QuantBot AI</button>
+      <button class="tab-btn" onclick="switchTab('mc')">Monte Carlo</button>
+      <button class="tab-btn" onclick="switchTab('risk')">Risk &amp; Performance</button>
+      <button class="tab-btn" onclick="switchTab('sizing')">Position Sizing</button>
+      <button class="tab-btn" onclick="switchTab('theory')">Market Theory</button>
+      <button class="tab-btn" onclick="switchTab('options')">Options &amp; Greeks</button>
+      <button class="tab-btn" onclick="switchTab('portfolio')">Portfolio Theory</button>
+      <button class="tab-btn" onclick="switchTab('technical')">Technical Methods</button>
+      <button class="tab-btn" onclick="switchTab('patterns')">Chart Patterns</button>
     </div>
 
     <!-- ── QuantBot AI ── -->
     <div id="tab-bot" class="tab-pane active">
       <div class="card" style="padding:0;overflow:hidden;">
         <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.5rem;">
-          <span style="font-size:1.2rem;">🤖</span>
+          <span class="icon icon-signals" style="width:18px;height:18px;color:var(--accent);"></span>
           <div><b style="color:var(--cream);">QuantBot</b><span style="font-size:.78rem;color:var(--muted);margin-left:.5rem;">Ask anything about trading, quant methods, or strategies</span></div>
         </div>
         <div class="ai-chat">
           <div class="ai-msgs" id="aiMessages">
-            <div class="msg-bot">👋 Hi! I'm QuantBot, your AI trading tutor. Ask me about any concept — RSI, Monte Carlo, Sharpe ratio, mean reversion, options Greeks, portfolio theory, or any strategy. What do you want to learn?</div>
+            <div class="msg-bot">Hi! I'm QuantBot, your AI trading tutor. Ask me about any concept — RSI, Monte Carlo, Sharpe ratio, mean reversion, options Greeks, portfolio theory, or any strategy. What do you want to learn?</div>
           </div>
           <div style="padding:0 1rem 1rem;">
             <div class="ai-input-row">
@@ -561,19 +561,19 @@ async function runMC(){
 function calcSharpe(){
   const rp=+document.getElementById('shrRp').value,rf=+document.getElementById('shrRf').value,sig=+document.getElementById('shrSig').value;
   const s=((rp-rf)/sig).toFixed(3);
-  const rating=s>2?'Excellent 🟢':s>1?'Good 🟡':s>0?'Acceptable 🟠':'Poor 🔴';
+  const rating=s>2?'Excellent':s>1?'Good':s>0?'Acceptable':'Poor';
   show('sharpeResult',`Sharpe Ratio: <b>${s}</b> — ${rating}`);
 }
 function calcSortino(){
   const rp=+document.getElementById('sorRp').value,rf=+document.getElementById('sorRf').value,dd=+document.getElementById('sorDd').value;
   const s=((rp-rf)/dd).toFixed(3);
-  show('sortinoResult',`Sortino Ratio: <b>${s}</b> — ${s>2?'Excellent 🟢':s>1?'Good 🟡':'Fair 🟠'}`);
+  show('sortinoResult',`Sortino Ratio: <b>${s}</b> — ${s>2?'Excellent':s>1?'Good':'Fair'}`);
 }
 function calcMDD(){
   const pk=+document.getElementById('mddPeak').value,tr=+document.getElementById('mddTrough').value,ret=+document.getElementById('mddRet').value;
   const mdd=((tr-pk)/pk*100).toFixed(2);
   const calmar=(ret/Math.abs(mdd)).toFixed(2);
-  show('mddResult',`Max Drawdown: <b>${mdd}%</b> · Calmar Ratio: <b>${calmar}</b> — ${calmar>1?'Strong 🟢':calmar>0.5?'Acceptable 🟡':'Weak 🔴'}`);
+  show('mddResult',`Max Drawdown: <b>${mdd}%</b> · Calmar Ratio: <b>${calmar}</b> — ${calmar>1?'Strong':calmar>0.5?'Acceptable ':'Weak '}`);
 }
 function calcVaR(){
   const port=+document.getElementById('varPort').value,sig=+document.getElementById('varSig').value/100,z=+document.getElementById('varConf').value;
@@ -615,7 +615,7 @@ function calcCAPM(){
   const rm=+document.getElementById('capmRm').value,actual=+document.getElementById('capmActual').value;
   const expected=(rf+beta*(rm-rf)).toFixed(2);
   const alpha=(actual-expected).toFixed(2);
-  show('capmResult',`Expected Return (CAPM): <b>${expected}%</b> · Alpha: <b>${alpha>0?'+':''}${alpha}%</b> — ${alpha>0?'Outperforming ✅':'Underperforming ❌'}`);
+  show('capmResult',`Expected Return (CAPM): <b>${expected}%</b> · Alpha: <b>${alpha>0?'+':''}${alpha}%</b> — ${alpha>0?'Outperforming ✓':'Underperforming ✗'}`);
 }
 function calcPortfolio(){
   const ra=+document.getElementById('ptRa').value,sa=+document.getElementById('ptSa').value;
@@ -631,7 +631,7 @@ function calcRSI(){
   const ag=+document.getElementById('rsiAG').value,al=+document.getElementById('rsiAL').value;
   const rs=ag/al;
   const rsi=(100-(100/(1+rs))).toFixed(1);
-  const signal=rsi>70?'Overbought 🔴 — consider taking profits':rsi<30?'Oversold 🟢 — potential reversal entry':'Neutral zone';
+  const signal=rsi>70?'Overbought — consider taking profits':rsi<30?'Oversold — potential reversal entry':'Neutral zone';
   show('rsiResult',`RSI: <b>${rsi}</b> — ${signal}`);
 }
 

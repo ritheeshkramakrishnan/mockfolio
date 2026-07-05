@@ -18,14 +18,14 @@
 
 <div class="app-layout">
   <aside class="sidebar">
-    <a href="/dashboard"><span class="icon">🏠</span> Dashboard</a>
-    <a href="/trade"><span class="icon">💹</span> Trade</a>
-    <a href="/options"><span class="icon">📊</span> Options</a>
-    <a href="/calls"><span class="icon">📡</span> Market Calls</a>
-    <a href="/signals"><span class="icon">🤖</span> AI Signals</a>
-    <a href="/activity" class="active"><span class="icon">📋</span> Activity Log</a>
-    <a href="/learn"><span class="icon">📚</span> AI Tutor</a>
-    <a href="/flashcards"><span class="icon">🃏</span> Flashcards</a>
+    <a href="/dashboard"><span class="icon icon-home"></span> Dashboard</a>
+    <a href="/trade"><span class="icon icon-trade"></span> Trade</a>
+    <a href="/options"><span class="icon icon-options"></span> Options</a>
+    <a href="/calls"><span class="icon icon-calls"></span> Market Calls</a>
+    <a href="/signals"><span class="icon icon-signals"></span> AI Signals</a>
+    <a href="/activity" class="active"><span class="icon icon-activity"></span> Activity Log</a>
+    <a href="/learn"><span class="icon icon-learn"></span> AI Tutor</a>
+    <a href="/flashcards"><span class="icon icon-cards"></span> Flashcards</a>
   </aside>
 
   <main class="main-content">
@@ -64,7 +64,6 @@
     <!-- "Why did my balance drop?" explainer (shown when positions exist) -->
     <div id="balanceExplainer" class="card" style="padding:1rem 1.4rem;margin-bottom:1.5rem;border-left:3px solid var(--gold);display:none;">
       <div style="display:flex;align-items:flex-start;gap:.75rem;">
-        <span style="font-size:1.3rem;">💡</span>
         <div>
           <div style="font-weight:700;margin-bottom:.3rem;">Why is your cash balance lower?</div>
           <div id="explainerText" style="font-size:.85rem;color:var(--muted);line-height:1.6;"></div>
@@ -75,21 +74,20 @@
     <!-- Filter tabs -->
     <div style="display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap;">
       <button id="tab-all"       onclick="setFilter('all')"       class="btn btn-green"      style="font-size:.8rem;padding:.35rem .8rem;">All</button>
-      <button id="tab-autopilot" onclick="setFilter('autopilot')" class="btn btn-secondary"  style="font-size:.8rem;padding:.35rem .8rem;">🤖 Autopilot</button>
-      <button id="tab-manual"    onclick="setFilter('manual')"    class="btn btn-secondary"  style="font-size:.8rem;padding:.35rem .8rem;">👤 Manual</button>
-      <button id="tab-options"   onclick="setFilter('options')"   class="btn btn-secondary"  style="font-size:.8rem;padding:.35rem .8rem;">📊 Options</button>
-      <button id="tab-ai_decision" onclick="setFilter('ai_decision')" class="btn btn-secondary" style="font-size:.8rem;padding:.35rem .8rem;">🧠 AI Decisions</button>
+      <button id="tab-autopilot" onclick="setFilter('autopilot')" class="btn btn-secondary"  style="font-size:.8rem;padding:.35rem .8rem;">Autopilot</button>
+      <button id="tab-manual"    onclick="setFilter('manual')"    class="btn btn-secondary"  style="font-size:.8rem;padding:.35rem .8rem;">Manual</button>
+      <button id="tab-options"   onclick="setFilter('options')"   class="btn btn-secondary"  style="font-size:.8rem;padding:.35rem .8rem;">Options</button>
+      <button id="tab-ai_decision" onclick="setFilter('ai_decision')" class="btn btn-secondary" style="font-size:.8rem;padding:.35rem .8rem;">AI Decisions</button>
     </div>
 
     <!-- Loading -->
     <div id="activityLoading" class="card" style="padding:2rem;text-align:center;color:var(--muted);">
-      <div style="font-size:1.5rem;margin-bottom:.5rem;">⏳</div>
       <div>Loading activity…</div>
     </div>
 
     <!-- Empty state -->
     <div id="activityEmpty" class="card" style="padding:2rem;text-align:center;color:var(--muted);display:none;">
-      <div style="font-size:2rem;margin-bottom:.75rem;">📋</div>
+      <span class="icon icon-activity" style="width:28px;height:28px;color:var(--muted);margin-bottom:.6rem;"></span>
       <div style="font-weight:600;margin-bottom:.4rem;">No activity yet</div>
       <div style="font-size:.85rem;">Make a trade or run Autopilot to see logs here</div>
     </div>
@@ -165,10 +163,10 @@ function renderFeed() {
 }
 
 function sourceBadge(e) {
-  if (e.source === 'autopilot') return '<span style="background:rgba(126,200,80,.15);color:var(--accent);padding:.15rem .55rem;border-radius:99px;font-size:.68rem;font-weight:700;letter-spacing:.04em;">🤖 AUTOPILOT</span>';
-  if (e.type === 'options_trade') return '<span style="background:rgba(138,95,210,.15);color:#a78bfa;padding:.15rem .55rem;border-radius:99px;font-size:.68rem;font-weight:700;letter-spacing:.04em;">📊 OPTIONS</span>';
-  if (e.type === 'ai_decision') return '<span style="background:rgba(126,200,80,.15);color:var(--accent);padding:.15rem .55rem;border-radius:99px;font-size:.68rem;font-weight:700;letter-spacing:.04em;">🧠 AI DECISION</span>';
-  return '<span style="background:rgba(255,255,255,.08);color:var(--muted);padding:.15rem .55rem;border-radius:99px;font-size:.68rem;font-weight:700;letter-spacing:.04em;">👤 MANUAL</span>';
+  if (e.source === 'autopilot') return '<span style="background:rgba(126,200,80,.15);color:var(--accent);padding:.15rem .55rem;border-radius:99px;font-size:.68rem;font-weight:700;letter-spacing:.04em;">AUTOPILOT</span>';
+  if (e.type === 'options_trade') return '<span style="background:rgba(138,95,210,.15);color:#a78bfa;padding:.15rem .55rem;border-radius:99px;font-size:.68rem;font-weight:700;letter-spacing:.04em;">OPTIONS</span>';
+  if (e.type === 'ai_decision') return '<span style="background:rgba(126,200,80,.15);color:var(--accent);padding:.15rem .55rem;border-radius:99px;font-size:.68rem;font-weight:700;letter-spacing:.04em;">AI DECISION</span>';
+  return '<span style="background:rgba(255,255,255,.08);color:var(--muted);padding:.15rem .55rem;border-radius:99px;font-size:.68rem;font-weight:700;letter-spacing:.04em;">MANUAL</span>';
 }
 
 function renderEvent(e) {
@@ -178,7 +176,7 @@ function renderEvent(e) {
 
   let actionLine = '';
   if (e.type === 'trade') {
-    const sideIcon  = e.side === 'buy' ? '📈' : '📉';
+    const sideIcon  = e.side === 'buy' ? '▲' : '▼';
     const sideColor = e.side === 'buy' ? 'var(--red)' : 'var(--accent)';
     actionLine = `<span style="color:${sideColor};font-weight:800;font-size:.95rem;">${sideIcon} ${e.side.toUpperCase()}</span>
       <span style="font-weight:700;font-size:.95rem;margin-left:.4rem;">${e.qty} ${e.symbol}</span>
@@ -188,7 +186,7 @@ function renderEvent(e) {
       actionLine += `<span style="color:${pnlColor};font-size:.82rem;font-weight:700;margin-left:.6rem;">P&L: ${e.pnl >= 0 ? '+' : ''}${fmt(e.pnl)}</span>`;
     }
   } else if (e.type === 'options_trade') {
-    const sideIcon  = e.side === 'buy' ? '📈' : '📉';
+    const sideIcon  = e.side === 'buy' ? '▲' : '▼';
     const sideColor = e.side === 'buy' ? 'var(--red)' : 'var(--accent)';
     const optLabel  = `${e.option_type ? e.option_type.toUpperCase() : ''} $${e.strike} exp ${e.expiry || ''}`;
     actionLine = `<span style="color:${sideColor};font-weight:800;font-size:.95rem;">${sideIcon} ${e.side.toUpperCase()}</span>

@@ -18,15 +18,15 @@
 
 <div class="app-layout">
   <aside class="sidebar">
-    <a href="/dashboard"><span class="icon">🏠</span> Dashboard</a>
-    <a href="/trade"><span class="icon">💹</span> Trade</a>
-    <a href="/options"><span class="icon">📊</span> Options</a>
-    <a href="/calls"><span class="icon">📡</span> Market Calls</a>
-    <a href="/signals"><span class="icon">🤖</span> AI Signals</a>
-    <a href="/autopilot" class="active"><span class="icon">🚀</span> Autopilot</a>
-    <a href="/activity"><span class="icon">📋</span> Activity Log</a>
-    <a href="/learn"><span class="icon">📚</span> AI Tutor</a>
-    <a href="/flashcards"><span class="icon">🃏</span> Flashcards</a>
+    <a href="/dashboard"><span class="icon icon-home"></span> Dashboard</a>
+    <a href="/trade"><span class="icon icon-trade"></span> Trade</a>
+    <a href="/options"><span class="icon icon-options"></span> Options</a>
+    <a href="/calls"><span class="icon icon-calls"></span> Market Calls</a>
+    <a href="/signals"><span class="icon icon-signals"></span> AI Signals</a>
+    <a href="/autopilot" class="active"><span class="icon icon-autopilot"></span> Autopilot</a>
+    <a href="/activity"><span class="icon icon-activity"></span> Activity Log</a>
+    <a href="/learn"><span class="icon icon-learn"></span> AI Tutor</a>
+    <a href="/flashcards"><span class="icon icon-cards"></span> Flashcards</a>
   </aside>
 
   <main class="main-content">
@@ -34,13 +34,13 @@
     <!-- Header -->
     <div class="section-head" style="align-items:flex-start;">
       <div>
-        <h2>🚀 Autopilot</h2>
+        <h2>Autopilot</h2>
         <p style="color:var(--muted);font-size:.9rem;">Allocate a budget — AI trades it autonomously on your behalf</p>
       </div>
       <div style="display:flex;gap:.75rem;align-items:center;margin-top:.25rem;flex-wrap:wrap;">
         <button id="coverLossesBtn" onclick="coverLosses()" class="btn btn-red"
           style="font-size:.85rem;padding:.45rem 1rem;opacity:0.35;cursor:not-allowed;"
-          disabled title="Loading portfolio…">🛡️ Cover Losses</button>
+          disabled title="Loading portfolio…">Cover Losses</button>
         <button id="runNowBtn" onclick="runNow()" class="btn btn-secondary" style="font-size:.85rem;">▶ Run Now</button>
         <button id="toggleBtn" onclick="toggleAutopilot()" class="btn btn-green" style="font-size:.95rem;padding:.5rem 1.2rem;min-width:120px;">
           — Loading…
@@ -57,7 +57,7 @@
 
     <!-- Pending orders notice (shown outside market hours) -->
     <div id="pendingBanner" style="display:none;padding:.7rem 1.1rem;border-radius:12px;margin-bottom:.75rem;background:rgba(240,185,11,.1);border:1px solid rgba(240,185,11,.25);font-size:.83rem;color:var(--gold);">
-      🕐 <b id="pendingCount">0</b> BUY order(s) queued — will execute when market opens Monday at 9:30 AM ET
+      <b id="pendingCount">0</b> BUY order(s) queued — will execute when market opens Monday at 9:30 AM ET
     </div>
 
     <!-- Status banner -->
@@ -65,7 +65,6 @@
 
     <!-- Auto-scan countdown (shown when autopilot is on) -->
     <div id="scanBar" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.6rem 1.1rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:.75rem;font-size:.82rem;">
-      <span style="font-size:1rem;">⏱️</span>
       <span style="color:var(--muted);">Auto-scanning every 5 min —</span>
       <span style="color:var(--text);">next scan in <b id="scanCountdown" style="color:var(--accent);">—</b></span>
       <span id="lastScanLabel" style="color:var(--muted);margin-left:auto;font-size:.76rem;"></span>
@@ -102,7 +101,7 @@
 
         <!-- Budget allocation -->
         <div class="card" style="padding:1.3rem 1.4rem;">
-          <div style="font-weight:700;margin-bottom:1rem;font-size:.95rem;">💰 Budget Allocation</div>
+          <div style="font-weight:700;margin-bottom:1rem;font-size:.95rem;">Budget Allocation</div>
 
           <label style="font-size:.78rem;color:var(--muted);display:block;margin-bottom:.3rem;">Amount to allocate to AI ($)</label>
           <div style="display:flex;gap:.5rem;margin-bottom:.3rem;">
@@ -122,7 +121,7 @@
           <div style="height:1px;background:var(--border);margin-bottom:1rem;"></div>
 
           <!-- Risk controls -->
-          <div style="font-weight:700;margin-bottom:.75rem;font-size:.9rem;">🛡️ Risk Controls</div>
+          <div style="font-weight:700;margin-bottom:.75rem;font-size:.9rem;">Risk Controls</div>
 
           <label style="font-size:.78rem;color:var(--muted);display:block;margin-bottom:.3rem;">Max per trade (% of available)</label>
           <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.9rem;">
@@ -138,20 +137,20 @@
           <div id="savedLossHint" style="font-size:.72rem;color:var(--accent);margin-bottom:.75rem;min-height:1em;"></div>
 
           <button onclick="saveConfig()" class="btn btn-green" style="width:100%;font-size:.88rem;">
-            💾 Save Settings
+            Save Settings
           </button>
           <div id="saveMsg" style="display:none;text-align:center;font-size:.78rem;color:var(--accent);margin-top:.5rem;">✓ Saved</div>
         </div>
 
         <!-- How it works -->
         <div class="card" style="padding:1.2rem 1.4rem;">
-          <div style="font-weight:700;margin-bottom:.75rem;font-size:.9rem;">ℹ️ How Autopilot Works</div>
+          <div style="font-weight:700;margin-bottom:.75rem;font-size:.9rem;">How Autopilot Works</div>
           <div style="font-size:.8rem;color:var(--muted);line-height:1.7;">
-            <div style="margin-bottom:.5rem;">🤖 <b style="color:var(--text);">AI analyzes</b> live prices + market news to decide what to buy or sell</div>
-            <div style="margin-bottom:.5rem;">💰 <b style="color:var(--text);">Budget cap</b> — AI can only deploy up to your allocated amount</div>
-            <div style="margin-bottom:.5rem;">📏 <b style="color:var(--text);">Position sizing</b> — max per trade % keeps any single bet small</div>
-            <div style="margin-bottom:.5rem;">🛑 <b style="color:var(--text);">Daily loss limit</b> — autopilot pauses if losses exceed your threshold</div>
-            <div>📋 <b style="color:var(--text);">Full transparency</b> — every decision logged with AI reasoning</div>
+            <div style="margin-bottom:.5rem;"><b style="color:var(--text);">AI analyzes</b> live prices + market news to decide what to buy or sell</div>
+            <div style="margin-bottom:.5rem;"><b style="color:var(--text);">Budget cap</b> — AI can only deploy up to your allocated amount</div>
+            <div style="margin-bottom:.5rem;"><b style="color:var(--text);">Position sizing</b> — max per trade % keeps any single bet small</div>
+            <div style="margin-bottom:.5rem;"><b style="color:var(--text);">Daily loss limit</b> — autopilot pauses if losses exceed your threshold</div>
+            <div><b style="color:var(--text);">Full transparency</b> — every decision logged with AI reasoning</div>
           </div>
         </div>
 
@@ -162,7 +161,7 @@
 
         <!-- Open positions held by autopilot -->
         <div class="card" style="padding:1.3rem 1.4rem;">
-          <div style="font-weight:700;margin-bottom:1rem;font-size:.95rem;">📈 AI Open Positions</div>
+          <div style="font-weight:700;margin-bottom:1rem;font-size:.95rem;">AI Open Positions</div>
           <div id="apPositions">
             <div style="color:var(--muted);font-size:.85rem;text-align:center;padding:1rem 0;">No autopilot positions open</div>
           </div>
@@ -171,11 +170,11 @@
         <!-- Recent decisions -->
         <div class="card" style="padding:1.3rem 1.4rem;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
-            <div style="font-weight:700;font-size:.95rem;">🧠 Recent Decisions</div>
+            <div style="font-weight:700;font-size:.95rem;">Recent Decisions</div>
             <button onclick="loadStats()" class="btn btn-secondary" style="font-size:.75rem;padding:.25rem .6rem;">↻ Refresh</button>
           </div>
           <div id="apFeed">
-            <div style="color:var(--muted);font-size:.85rem;text-align:center;padding:1rem 0;">⏳ Loading…</div>
+            <div style="color:var(--muted);font-size:.85rem;text-align:center;padding:1rem 0;">Loading…</div>
           </div>
         </div>
 
@@ -218,7 +217,7 @@ async function loadStats() {
     banner.style.background = 'rgba(255,100,100,.12)';
     banner.style.color = 'var(--red)';
     banner.style.border = '1px solid rgba(255,100,100,.25)';
-    banner.textContent = '⚠️ Failed to load autopilot data: ' + e.message + ' — try refreshing the page.';
+    banner.textContent = '⚠ Failed to load autopilot data: ' + e.message + ' — try refreshing the page.';
     document.getElementById('apFeed').innerHTML = '<div style="color:var(--muted);font-size:.85rem;text-align:center;padding:1rem 0;">Could not load data</div>';
     return;
   }
@@ -237,19 +236,19 @@ async function loadStats() {
     banner.style.background = 'rgba(255,100,100,.12)';
     banner.style.color = 'var(--red)';
     banner.style.border = '1px solid rgba(255,100,100,.25)';
-    banner.textContent = '⚠️ No Groq API key configured — autopilot requires a GROQ_API_KEY to make decisions.';
+    banner.textContent = '⚠ No Groq API key configured — autopilot requires a GROQ_API_KEY to make decisions.';
   } else if (res.paused_today) {
     banner.style.display = 'block';
     banner.style.background = 'rgba(240,185,11,.12)';
     banner.style.color = 'var(--gold)';
     banner.style.border = '1px solid rgba(240,185,11,.25)';
-    banner.textContent = `🛑 Daily loss limit hit (${fmt(Math.abs(res.today_pnl))} lost today, limit ${fmt(res.daily_loss_limit)}). Autopilot paused until tomorrow.`;
+    banner.textContent = `Daily loss limit hit (${fmt(Math.abs(res.today_pnl))} lost today, limit ${fmt(res.daily_loss_limit)}). Autopilot paused until tomorrow.`;
   } else if (res.enabled) {
     banner.style.display = 'block';
     banner.style.background = 'rgba(126,200,80,.1)';
     banner.style.color = 'var(--accent)';
     banner.style.border = '1px solid rgba(126,200,80,.2)';
-    banner.textContent = `✅ Autopilot is ACTIVE — AI is monitoring the market and trading up to ${fmt(res.budget || 0)} on your behalf.`;
+    banner.textContent = `✓ Autopilot is ACTIVE — AI is monitoring the market and trading up to ${fmt(res.budget || 0)} on your behalf.`;
   } else {
     banner.style.display = 'none';
   }
@@ -355,15 +354,15 @@ async function toggleAutopilot() {
 async function runNow() {
   const btn = document.getElementById('runNowBtn');
   btn.disabled = true;
-  btn.textContent = '⏳ Running…';
+  btn.textContent = 'Running…';
   try {
     const res = await fetch('/api/autopilot/run', {method:'POST'}).then(r => r.json());
     if (!res.ok) {
       alert(res.message || 'Autopilot run failed');
     } else {
       const actions = (res.trades || []).map(t => `${t.action} ${t.symbol || ''}: ${t.reasoning}`).join('\n\n');
-      if (actions) alert('✅ Autopilot ran:\n\n' + actions);
-      else alert('✅ Autopilot ran — no trades made (market conditions not favorable).');
+      if (actions) alert('✓ Autopilot ran:\n\n' + actions);
+      else alert('✓ Autopilot ran — no trades made (market conditions not favorable).');
     }
   } catch(e) {
     alert('Run failed: ' + e.message);
@@ -414,7 +413,7 @@ function renderFeed(logs) {
     if (isCover) {
       badgeColor = baseAct === 'SELL' ? 'rgba(212,95,95,.2)' : 'rgba(126,200,80,.18)';
       badgeText  = baseAct === 'SELL' ? 'var(--red)' : 'var(--accent)';
-      badgeLabel = `🛡️ ${baseAct}`;
+      badgeLabel = `${baseAct}`;
     } else if (isBad) {
       badgeColor = 'rgba(255,100,100,.15)'; badgeText = '#f66'; badgeLabel = action;
     } else if (action === 'BUY') {
@@ -422,9 +421,9 @@ function renderFeed(logs) {
     } else if (action === 'SELL') {
       badgeColor = 'rgba(240,185,11,.15)'; badgeText = 'var(--gold)'; badgeLabel = action;
     } else if (action === 'QUEUED') {
-      badgeColor = 'rgba(100,160,255,.15)'; badgeText = '#7ab4ff'; badgeLabel = '🕐 QUEUED';
+      badgeColor = 'rgba(100,160,255,.15)'; badgeText = '#7ab4ff'; badgeLabel = 'QUEUED';
     } else if (action === 'BLOCKED') {
-      badgeColor = 'rgba(255,100,100,.12)'; badgeText = 'var(--red)'; badgeLabel = '🚫 BLOCKED';
+      badgeColor = 'rgba(255,100,100,.12)'; badgeText = 'var(--red)'; badgeLabel = 'BLOCKED';
     } else {
       badgeColor = 'rgba(255,255,255,.06)'; badgeText = 'var(--muted)'; badgeLabel = action;
     }
@@ -527,7 +526,7 @@ async function loadMarketStatus() {
     if (pend.length > 0) {
       document.getElementById('pendingCount').textContent = pend.length;
       const isWeekend = mkt.status === 'weekend';
-      pb.innerHTML = `🕐 <b>${pend.length}</b> BUY order(s) queued — will execute at next market open` +
+      pb.innerHTML = `<b>${pend.length}</b> BUY order(s) queued — will execute at next market open` +
         (isWeekend ? ' (Monday 9:30 AM ET)' : ' (9:30 AM ET)');
       pb.style.display = 'block';
     } else {
@@ -588,7 +587,7 @@ async function coverLosses() {
   }
 
   const confirmed = confirm(
-    `🛡️  Cover Losses Mode\n` +
+    ` Cover Losses Mode\n` +
     `────────────────────────────────\n` +
     lossLine +
     `\nAI will:\n` +
@@ -602,7 +601,7 @@ async function coverLosses() {
   if (!confirmed) return;
 
   btn.disabled = true;
-  btn.textContent = '⏳ Recovering…';
+  btn.textContent = 'Recovering…';
 
   // Show recovery banner
   const banner = document.getElementById('statusBanner');
@@ -610,14 +609,14 @@ async function coverLosses() {
   banner.style.background = 'rgba(212,95,95,.12)';
   banner.style.color = 'var(--red)';
   banner.style.border = '1px solid rgba(212,95,95,.25)';
-  banner.textContent = '🛡️ Running cover losses — AI is analysing your portfolio…';
+  banner.textContent = 'Running cover losses — AI is analysing your portfolio…';
 
   try {
     const res = await fetch('/api/autopilot/cover-losses', {method:'POST'}).then(r => r.json());
 
     if (!res.ok) {
       banner.style.background = 'rgba(255,100,100,.12)';
-      banner.textContent = '❌ Recovery failed: ' + (res.message || 'Unknown error');
+      banner.textContent = '✗ Recovery failed: ' + (res.message || 'Unknown error');
     } else {
       const trades = (res.trades || []).filter(t => t.action.startsWith('COVER_'));
 
@@ -625,28 +624,28 @@ async function coverLosses() {
         banner.style.background = 'rgba(126,200,80,.1)';
         banner.style.color = 'var(--accent)';
         banner.style.border = '1px solid rgba(126,200,80,.2)';
-        banner.textContent = `🛡️ Recovery complete — ${trades.length} trade(s) executed. See Recent Decisions below.`;
+        banner.textContent = `Recovery complete — ${trades.length} trade(s) executed. See Recent Decisions below.`;
 
         // Show detail
         const summary = trades.map(t => {
-          const verb = t.action === 'COVER_SELL' ? '🔴 SOLD' : '🟢 BOUGHT';
+          const verb = t.action === 'COVER_SELL' ? 'SOLD' : 'BOUGHT';
           return `${verb} ${t.symbol || ''}: ${t.reasoning}`;
         }).join('\n\n');
-        alert('🛡️ Cover Losses — Recovery Trades\n\n' + summary);
+        alert('Cover Losses — Recovery Trades\n\n' + summary);
       } else {
         banner.style.background = 'rgba(126,200,80,.06)';
         banner.style.color = 'var(--muted)';
         banner.style.border = '1px solid rgba(126,200,80,.15)';
-        banner.textContent = '✅ Portfolio reviewed — no recovery trades needed right now.';
+        banner.textContent = '✓ Portfolio reviewed — no recovery trades needed right now.';
       }
       loadStats();
     }
   } catch(e) {
-    banner.textContent = '❌ Request failed: ' + e.message;
+    banner.textContent = '✗ Request failed: ' + e.message;
   }
 
   btn.disabled = false;
-  btn.textContent = '🛡️ Cover Losses';
+  btn.textContent = 'Cover Losses';
 }
 
 // init

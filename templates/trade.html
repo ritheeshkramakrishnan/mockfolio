@@ -31,15 +31,15 @@
 </nav>
 <div class="app-layout">
   <aside class="sidebar">
-    <a href="/dashboard"><span class="icon">🏠</span> Dashboard</a>
-    <a href="/trade" class="active"><span class="icon">💹</span> Trade</a>
-    <a href="/options"><span class="icon">📊</span> Options</a>
-    <a href="/calls"><span class="icon">📡</span> Market Calls</a>
-    <a href="/signals"><span class="icon">🤖</span> AI Signals</a>
-    <a href="/autopilot"><span class="icon">🚀</span> Autopilot</a>
-    <a href="/activity"><span class="icon">📋</span> Activity Log</a>
-    <a href="/learn"><span class="icon">📚</span> AI Tutor</a>
-    <a href="/flashcards"><span class="icon">🃏</span> Flashcards</a>
+    <a href="/dashboard"><span class="icon icon-home"></span> Dashboard</a>
+    <a href="/trade" class="active"><span class="icon icon-trade"></span> Trade</a>
+    <a href="/options"><span class="icon icon-options"></span> Options</a>
+    <a href="/calls"><span class="icon icon-calls"></span> Market Calls</a>
+    <a href="/signals"><span class="icon icon-signals"></span> AI Signals</a>
+    <a href="/autopilot"><span class="icon icon-autopilot"></span> Autopilot</a>
+    <a href="/activity"><span class="icon icon-activity"></span> Activity Log</a>
+    <a href="/learn"><span class="icon icon-learn"></span> AI Tutor</a>
+    <a href="/flashcards"><span class="icon icon-cards"></span> Flashcards</a>
   </aside>
   <main class="main-content">
     <div class="section-head">
@@ -67,12 +67,12 @@
       <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
         <div style="display:flex;align-items:center;gap:.35rem;">
           <span class="style-label">STYLE</span>
-          <button class="style-btn active" onclick="setStyle('1',this)" title="Candlestick">🕯 Candles</button>
-          <button class="style-btn" onclick="setStyle('0',this)" title="Bars">📊 Bars</button>
-          <button class="style-btn" onclick="setStyle('8',this)" title="Heikin-Ashi">🔸 Heikin-Ashi</button>
-          <button class="style-btn" onclick="setStyle('2',this)" title="Line">📈 Line</button>
-          <button class="style-btn" onclick="setStyle('3',this)" title="Area">🌊 Area</button>
-          <button class="style-btn" onclick="setStyle('5',this)" title="Hollow Candles">⬜ Hollow</button>
+          <button class="style-btn active" onclick="setStyle('1',this)" title="Candlestick">Candles</button>
+          <button class="style-btn" onclick="setStyle('0',this)" title="Bars">Bars</button>
+          <button class="style-btn" onclick="setStyle('8',this)" title="Heikin-Ashi">Heikin-Ashi</button>
+          <button class="style-btn" onclick="setStyle('2',this)" title="Line">Line</button>
+          <button class="style-btn" onclick="setStyle('3',this)" title="Area">Area</button>
+          <button class="style-btn" onclick="setStyle('5',this)" title="Hollow Candles">Hollow</button>
           <button class="style-btn" onclick="setStyle('6',this)" title="Baseline">〰 Baseline</button>
         </div>
         <div style="width:1px;height:20px;background:var(--border);"></div>
@@ -96,7 +96,7 @@
       </div>
     </div>
     <div style="font-size:.72rem;color:var(--muted);margin:.4rem 0 .5rem;">
-      📐 Drawing toolbar: trend lines, Fibonacci, channels, H&amp;S patterns, wedges and more. Right-click any drawing to edit or delete.
+      Drawing toolbar: trend lines, Fibonacci, channels, H&amp;S patterns, wedges and more. Right-click any drawing to edit or delete.
     </div>
     <div class="trade-layout">
       <div class="card" style="padding:1.5rem;">

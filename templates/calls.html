@@ -18,15 +18,15 @@
 
 <div class="app-layout">
   <aside class="sidebar">
-    <a href="/dashboard"><span class="icon">🏠</span> Dashboard</a>
-    <a href="/trade"><span class="icon">💹</span> Trade</a>
-    <a href="/options"><span class="icon">📊</span> Options</a>
-    <a href="/calls" class="active"><span class="icon">📡</span> Market Calls</a>
-    <a href="/signals"><span class="icon">🤖</span> AI Signals</a>
-    <a href="/autopilot"><span class="icon">🚀</span> Autopilot</a>
-    <a href="/activity"><span class="icon">📋</span> Activity Log</a>
-    <a href="/learn"><span class="icon">📚</span> AI Tutor</a>
-    <a href="/flashcards"><span class="icon">🃏</span> Flashcards</a>
+    <a href="/dashboard"><span class="icon icon-home"></span> Dashboard</a>
+    <a href="/trade"><span class="icon icon-trade"></span> Trade</a>
+    <a href="/options"><span class="icon icon-options"></span> Options</a>
+    <a href="/calls" class="active"><span class="icon icon-calls"></span> Market Calls</a>
+    <a href="/signals"><span class="icon icon-signals"></span> AI Signals</a>
+    <a href="/autopilot"><span class="icon icon-autopilot"></span> Autopilot</a>
+    <a href="/activity"><span class="icon icon-activity"></span> Activity Log</a>
+    <a href="/learn"><span class="icon icon-learn"></span> AI Tutor</a>
+    <a href="/flashcards"><span class="icon icon-cards"></span> Flashcards</a>
   </aside>
 
   <main class="main-content">
@@ -36,7 +36,7 @@
         <p style="color:var(--muted);font-size:.9rem;">Add symbols to your watchlist — AI monitors them and makes trade calls</p>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.4rem;">
-        <button id="genBtn" onclick="generateCalls()" class="btn btn-green">⚡ Generate Fresh Calls</button>
+        <button id="genBtn" onclick="generateCalls()" class="btn btn-green">Generate Fresh Calls</button>
         <span id="lastGenLabel" style="font-size:.72rem;color:var(--muted);display:none;">Last generated: <b id="lastGenTime">—</b></span>
       </div>
     </div>
@@ -46,7 +46,7 @@
       <!-- Watchlist -->
       <div>
         <div class="card" style="padding:1.2rem 1.4rem;">
-          <div style="font-size:.85rem;font-weight:700;margin-bottom:.75rem;color:var(--text);">📋 Watchlist</div>
+          <div style="font-size:.85rem;font-weight:700;margin-bottom:.75rem;color:var(--text);">Watchlist</div>
           <div style="display:flex;gap:.5rem;margin-bottom:.75rem;">
             <input id="watchInput" type="text" placeholder="Symbol…"
               style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.4rem .6rem;border-radius:8px;font-size:.85rem;width:100%;text-transform:uppercase;"
@@ -78,12 +78,11 @@
       <!-- Calls feed -->
       <div>
         <div id="callsLoading" class="card" style="padding:2rem;text-align:center;color:var(--muted);display:none;">
-          <div style="font-size:1.5rem;margin-bottom:.5rem;">⏳</div>
           <div>AI is analyzing your watchlist…</div>
         </div>
 
         <div id="callsEmpty" class="card" style="padding:2rem;text-align:center;color:var(--muted);">
-          <div style="font-size:2rem;margin-bottom:.75rem;">📡</div>
+          <span class="icon icon-calls" style="width:28px;height:28px;color:var(--muted);margin-bottom:.6rem;"></span>
           <div style="font-weight:600;margin-bottom:.4rem;">No calls yet</div>
           <div style="font-size:.85rem;">Add symbols to your watchlist and click <b>Generate Calls</b></div>
         </div>
@@ -117,7 +116,7 @@ function marketClosedAlert() {
   } else {
     when = 'Opens next trading day at 9:30 AM ET';
   }
-  alert(`🔒 Market's closed at the moment — please try again later.\n\n${when}`);
+  alert(`Market's closed at the moment — please try again later.\n\n${when}`);
 }
 
 // ── watchlist ─────────────────────────────────────────────────────────────────
@@ -225,7 +224,7 @@ function renderCalls(calls) {
       <div style="font-size:.82rem;color:var(--text);opacity:.85;line-height:1.5;">${c.reasoning || ''}</div>
 
       <div style="display:flex;gap:.6rem;margin-top:1rem;">
-        <button onclick="paperTradeCall('${c.symbol}','${bull?'buy':'sell'}',${c.entry_price||0})" class="btn btn-green" style="font-size:.8rem;padding:.35rem .8rem;">📈 Paper Trade</button>
+        <button onclick="paperTradeCall('${c.symbol}','${bull?'buy':'sell'}',${c.entry_price||0})" class="btn btn-green" style="font-size:.8rem;padding:.35rem .8rem;">Paper Trade</button>
         <a href="/trade" class="btn btn-secondary" style="font-size:.8rem;padding:.35rem .8rem;">View Chart</a>
       </div>
     </div>`;
@@ -238,7 +237,7 @@ async function generateCalls() {
   const btn = document.getElementById('genBtn');
   const loading = document.getElementById('callsLoading');
   btn.disabled = true;
-  btn.textContent = '⏳ Fetching news & analyzing…';
+  btn.textContent = 'Fetching news & analyzing…';
   loading.style.display = 'block';
   document.getElementById('callsFeed').innerHTML = '';
   document.getElementById('callsEmpty').style.display = 'none';
@@ -258,7 +257,7 @@ async function generateCalls() {
     }
   } catch(e) { alert('Generation failed. Check your API key.'); }
   btn.disabled = false;
-  btn.textContent = '⚡ Generate Fresh Calls';
+  btn.textContent = 'Generate Fresh Calls';
   loading.style.display = 'none';
 }
 
@@ -272,7 +271,7 @@ async function paperTradeCall(symbol, side, price) {
     body: JSON.stringify({symbol, side, qty: parseFloat(qty)})
   }).then(r=>r.json());
   if (res.error) { alert('Trade failed: ' + res.error); return; }
-  alert(`✅ ${side.toUpperCase()} ${qty} ${symbol} @ ${fmt(res.price)} | Balance: ${fmt(res.new_balance)}`);
+  alert(`✓ ${side.toUpperCase()} ${qty} ${symbol} @ ${fmt(res.price)} | Balance: ${fmt(res.new_balance)}`);
 }
 
 // init

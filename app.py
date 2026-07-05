@@ -103,6 +103,8 @@ _SEED_PRICES = {
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(32))
+if os.environ.get("FLASK_ENV") != "production":
+    app.config["TEMPLATES_AUTO_RELOAD"] = True
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "mockfolio.db")
 STARTING_BALANCE = 50_000.0  # paper money

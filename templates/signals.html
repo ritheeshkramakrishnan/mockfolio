@@ -71,20 +71,20 @@
 
 <div class="app-layout">
   <aside class="sidebar">
-    <a href="/dashboard"><span class="icon">🏠</span> Dashboard</a>
-    <a href="/trade"><span class="icon">💹</span> Trade</a>
-    <a href="/options"><span class="icon">📊</span> Options</a>
-    <a href="/calls"><span class="icon">📡</span> Market Calls</a>
-    <a href="/signals" class="active"><span class="icon">🤖</span> AI Signals</a>
-    <a href="/autopilot"><span class="icon">🚀</span> Autopilot</a>
-    <a href="/activity"><span class="icon">📋</span> Activity Log</a>
-    <a href="/learn"><span class="icon">📚</span> AI Tutor</a>
-    <a href="/flashcards"><span class="icon">🃏</span> Flashcards</a>
+    <a href="/dashboard"><span class="icon icon-home"></span> Dashboard</a>
+    <a href="/trade"><span class="icon icon-trade"></span> Trade</a>
+    <a href="/options"><span class="icon icon-options"></span> Options</a>
+    <a href="/calls"><span class="icon icon-calls"></span> Market Calls</a>
+    <a href="/signals" class="active"><span class="icon icon-signals"></span> AI Signals</a>
+    <a href="/autopilot"><span class="icon icon-autopilot"></span> Autopilot</a>
+    <a href="/activity"><span class="icon icon-activity"></span> Activity Log</a>
+    <a href="/learn"><span class="icon icon-learn"></span> AI Tutor</a>
+    <a href="/flashcards"><span class="icon icon-cards"></span> Flashcards</a>
   </aside>
 
   <main class="main-content">
     <div class="section-head" style="margin-bottom:1rem;">
-      <h2>📡 AI Market Signals</h2>
+      <h2>AI Market Signals</h2>
       <p style="color:var(--muted);font-size:.9rem;">Live news → AI analysis → Paper trade recommendations · Auto-refreshes every 5 min · Educational only</p>
     </div>
 
@@ -164,14 +164,14 @@ function renderSignal(s) {
       <div class="sig-meta-item"><div class="lbl">Timeframe</div><div class="val">${s.timeframe || '1-5 days'}</div></div>
       <div class="sig-meta-item"><div class="lbl">Entry</div><div class="val">Market Price</div></div>
     </div>
-    <div class="sig-thesis">📊 ${s.thesis}</div>
+    <div class="sig-thesis">${s.thesis}</div>
     <div class="sig-risk">⚠ Risk: ${s.risk}</div>
-    <div class="sig-trigger">📰 ${s.news_trigger}</div>
+    <div class="sig-trigger">${s.news_trigger}</div>
     <div class="sig-action">
       <button class="btn ${isUp ? 'btn-green' : 'btn-primary'}"
               style="font-size:.8rem;padding:.35rem .9rem;flex:1;justify-content:center;"
               onclick="paperTrade('${s.ticker}','${isUp ? 'buy' : 'sell'}')">
-        ${isUp ? '🟢 Paper BUY' : '🔴 Paper SELL'} ${s.ticker}
+        ${isUp ? 'Paper BUY' : 'Paper SELL'} ${s.ticker}
       </button>
       <button class="btn btn-secondary"
               style="font-size:.8rem;padding:.35rem .9rem;"
@@ -183,7 +183,6 @@ function renderSignal(s) {
 function renderNews(articles) {
   if (!articles || articles.length === 0) {
     return `<div class="empty-news">
-      <div style="font-size:1.5rem;margin-bottom:.5rem;">📡</div>
       <div>No live news available.</div>
       <div style="margin-top:.5rem;font-size:.8rem;">The app fetches from MarketWatch, Reuters & CNBC.<br>Ensure the server has internet access.</div>
     </div>`;

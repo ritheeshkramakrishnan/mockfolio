@@ -240,8 +240,24 @@ footer {
   background: var(--accent-dim); color: var(--accent);
   border-left-color: var(--accent);
 }
-.sidebar a .icon { font-size: 1rem; filter: grayscale(1) brightness(1.6); opacity: .85; }
-.sidebar a.active .icon, .sidebar a:hover .icon { filter: none; opacity: 1; }
+
+/* ── monochrome SVG icon system (mask icons inherit currentColor) ── */
+.icon {
+  display: inline-block; width: 17px; height: 17px; flex-shrink: 0;
+  background-color: currentColor;
+  -webkit-mask: var(--i) no-repeat center / contain;
+          mask: var(--i) no-repeat center / contain;
+}
+.icon-home      { --i: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>'); }
+.icon-trade     { --i: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg>'); }
+.icon-options   { --i: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>'); }
+.icon-calls     { --i: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49M7.76 16.24a6 6 0 0 1 0-8.49M19.07 4.93a10 10 0 0 1 0 14.14M4.93 19.07a10 10 0 0 1 0-14.14"/></svg>'); }
+.icon-signals   { --i: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>'); }
+.icon-autopilot { --i: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>'); }
+.icon-activity  { --i: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>'); }
+.icon-learn     { --i: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>'); }
+.icon-cards     { --i: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>'); }
+.icon-menu      { --i: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>'); }
 
 .main-content { margin-left: 220px; flex: 1; padding: 2rem; }
 
@@ -411,8 +427,7 @@ textarea.input { font-family: var(--font); }
   -webkit-tap-highlight-color: transparent; transition: color .15s;
 }
 #mobileNav a.active, #mobileNav button.active { color: var(--accent); }
-#mobileNav .mnav-icon { font-size: 1.3rem; line-height: 1; filter: grayscale(1) brightness(1.6); opacity: .8; }
-#mobileNav a.active .mnav-icon, #mobileNav button.active .mnav-icon { filter: none; opacity: 1; }
+#mobileNav .mnav-icon { width: 20px; height: 20px; }
 
 #mobileMoreOverlay {
   display: none; position: fixed; inset: 0; z-index: 299;
@@ -441,7 +456,7 @@ textarea.input { font-family: var(--font); }
 }
 #mobileMoreSheet a:last-child { border-bottom: none; }
 #mobileMoreSheet a.active { color: var(--accent); }
-#mobileMoreSheet .sheet-icon { font-size: 1.2rem; width: 1.6rem; text-align: center; }
+#mobileMoreSheet .sheet-icon { width: 18px; height: 18px; }
 
 /* ══════════════════════════════════════════════
    BREAKPOINT: TABLET / MOBILE  ≤ 768 px

@@ -17,15 +17,15 @@
 
 <div class="app-layout">
   <aside class="sidebar">
-    <a href="/dashboard"><span class="icon">🏠</span> Dashboard</a>
-    <a href="/trade"><span class="icon">💹</span> Trade</a>
-    <a href="/options"><span class="icon">📊</span> Options</a>
-    <a href="/calls"><span class="icon">📡</span> Market Calls</a>
-    <a href="/signals"><span class="icon">🤖</span> AI Signals</a>
-    <a href="/autopilot"><span class="icon">🚀</span> Autopilot</a>
-    <a href="/activity"><span class="icon">📋</span> Activity Log</a>
-    <a href="/learn"><span class="icon">📚</span> AI Tutor</a>
-    <a href="/flashcards" class="active"><span class="icon">🃏</span> Flashcards</a>
+    <a href="/dashboard"><span class="icon icon-home"></span> Dashboard</a>
+    <a href="/trade"><span class="icon icon-trade"></span> Trade</a>
+    <a href="/options"><span class="icon icon-options"></span> Options</a>
+    <a href="/calls"><span class="icon icon-calls"></span> Market Calls</a>
+    <a href="/signals"><span class="icon icon-signals"></span> AI Signals</a>
+    <a href="/autopilot"><span class="icon icon-autopilot"></span> Autopilot</a>
+    <a href="/activity"><span class="icon icon-activity"></span> Activity Log</a>
+    <a href="/learn"><span class="icon icon-learn"></span> AI Tutor</a>
+    <a href="/flashcards" class="active"><span class="icon icon-cards"></span> Flashcards</a>
   </aside>
 
   <main class="main-content">
@@ -48,7 +48,7 @@
       <button class="fc-cat-btn" onclick="filterCat('Statistics', this)">Statistics</button>
       <button class="fc-cat-btn" onclick="filterCat('Market Structure', this)">Market Structure</button>
       <button class="fc-cat-btn" onclick="filterCat('Strategies', this)">Strategies</button>
-      <button class="fc-cat-btn" id="myCatBtn" onclick="filterCat('My Cards', this)" style="display:none;">⭐ My Cards</button>
+      <button class="fc-cat-btn" id="myCatBtn" onclick="filterCat('My Cards', this)" style="display:none;">★ My Cards</button>
     </div>
 
     <!-- progress bar -->
@@ -88,13 +88,13 @@
       <button class="btn btn-secondary" onclick="nextCard()">Next →</button>
     </div>
     <div style="text-align:center;margin-top:1rem;">
-      <button class="btn btn-ghost" style="font-size:.85rem;" onclick="shuffleCards()">🔀 Shuffle</button>
+      <button class="btn btn-ghost" style="font-size:.85rem;" onclick="shuffleCards()">Shuffle</button>
       <button class="btn btn-ghost" style="font-size:.85rem;margin-left:.5rem;" onclick="resetProgress()">↺ Reset Progress</button>
     </div>
 
     <!-- My Custom Cards list (shown when "My Cards" filter active) -->
     <div id="customCardsPanel" style="display:none;margin-top:2rem;">
-      <h3 style="font-size:.95rem;font-weight:700;margin-bottom:1rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">⭐ My Custom Cards</h3>
+      <h3 style="font-size:.95rem;font-weight:700;margin-bottom:1rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">★ My Custom Cards</h3>
       <div id="customCardsList"></div>
     </div>
 
