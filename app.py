@@ -106,7 +106,7 @@ app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(32))
 if os.environ.get("FLASK_ENV") != "production":
     app.config["TEMPLATES_AUTO_RELOAD"] = True
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "mockfolio.db")
+DB_PATH = os.environ.get("MOCKFOLIO_DB_PATH") or os.path.join(os.path.dirname(__file__), "mockfolio.db")
 STARTING_BALANCE = 50_000.0  # paper money
 PROFIT_TARGET_PCT = 0.15      # 15% → must reach $57,500 to go funded
 
@@ -1225,9 +1225,9 @@ def _start_scheduler():
     return sched
 
 
-# Start scheduler — guard against Flask debug double-start and gunicorn pre-fork
+# Start scheduler — guard against Flask debug double-start, gunicorn pre-fork, and tests
 import os as _os
-if not (_os.environ.get("WERKZEUG_RUN_MAIN") == "false"):
+if not (_os.environ.get("WERKZEUG_RUN_MAIN") == "false") and not _os.environ.get("MOCKFOLIO_DISABLE_SCHEDULER"):
     _scheduler = _start_scheduler()
 
 # ── market data helpers ───────────────────────────────────────────────────────
