@@ -1,6 +1,6 @@
 import pytest
 
-import app as app_module
+from mockfolio import market
 from conftest import register_user
 
 
@@ -8,7 +8,7 @@ from conftest import register_user
 def _fixed_price(monkeypatch):
     """Trades hit live/EOD/simulated price sources over the network — pin a
     deterministic price so tests are fast and don't depend on connectivity."""
-    monkeypatch.setattr(app_module, "_get_price", lambda symbol: (100.0, "test"))
+    monkeypatch.setattr(market, "_get_price", lambda symbol: (100.0, "test"))
 
 
 def test_buy_deducts_balance_and_opens_position(client):
@@ -52,7 +52,7 @@ def test_buy_then_sell_realizes_pnl(client, monkeypatch):
     register_user(client)
     client.post("/api/trade", json={"symbol": "AAPL", "qty": 10, "side": "buy"})
 
-    monkeypatch.setattr(app_module, "_get_price", lambda symbol: (110.0, "test"))
+    monkeypatch.setattr(market, "_get_price", lambda symbol: (110.0, "test"))
     resp = client.post("/api/trade", json={"symbol": "AAPL", "qty": 10, "side": "sell"})
     assert resp.status_code == 200
     body = resp.get_json()

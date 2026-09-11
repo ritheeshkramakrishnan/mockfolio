@@ -24,7 +24,24 @@ A paper-trading platform for learning to invest without risking real money. User
 
 ## Architecture
 
-The app currently lives in a single `app.py` module (routes, DB access, and business logic together) — a refactor into a Flask application-factory + blueprints structure (auth, trading, options, autopilot, signals, payments, etc.) is planned. The database layer supports both SQLite (via the stdlib `sqlite3` module) and PostgreSQL (via a thin `psycopg2` wrapper, `_PgConn`, that mirrors the `sqlite3` connection API) so the same query code runs against either backend depending on whether `DATABASE_URL` is set.
+`app.py` is a thin entrypoint (`from mockfolio import create_app; app = create_app()`); the application lives in the `mockfolio/` package, structured as a Flask application factory with one blueprint per feature area:
+
+```
+mockfolio/
+  __init__.py          create_app(): wires config, DB init, blueprints, scheduler
+  db.py                 SQLite/PostgreSQL connection layer + schema/migrations
+  market.py              price/history fetching (live → EOD → simulated fallback)
+  ai_client.py            Groq client init
+  news.py                 news fetching + AI signal generation
+  portfolio.py             snapshots, phase promotion, JSON/CSV backup
+  autopilot_engine.py      the autopilot trading engine + background scheduler
+  options_math.py          Black-Scholes pricing engine
+  blueprints/
+    auth.py, trading.py, autopilot.py, options.py,
+    signals.py, flashcards.py, ai_chat.py, activity.py
+```
+
+The database layer supports both SQLite (via the stdlib `sqlite3` module) and PostgreSQL (via a thin `psycopg2` wrapper, `_PgConn`, that mirrors the `sqlite3` connection API) so the same query code runs against either backend depending on whether `DATABASE_URL` is set. Code with no Flask request context (the background scheduler thread) uses `mockfolio.db.raw_connection()` directly instead of the request-scoped `get_db()`.
 
 ## Getting started
 
@@ -62,6 +79,7 @@ The app starts on `http://localhost:5000` using a local SQLite database (`mockfo
 | `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` / `SMTP_PORT` | No | Enables password-reset emails. |
 | `FLASK_ENV` | No | Set to `production` in deployment to disable debug/template auto-reload. |
 | `PORT` | No | Port to bind (defaults to `5000`; set automatically by Railway). |
+| `MOCKFOLIO_DB_PATH` / `MOCKFOLIO_DATA_DIR` / `MOCKFOLIO_DISABLE_SCHEDULER` | No | Test-only overrides used by the pytest suite to isolate the database, JSON/CSV backup directory, and background scheduler from your real local data. Not needed for normal local development or deployment. |
 
 ## Testing
 

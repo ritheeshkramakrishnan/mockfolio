@@ -9,14 +9,13 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 _db_fd, _db_path = tempfile.mkstemp(suffix=".db")
 os.close(_db_fd)
 os.environ["MOCKFOLIO_DB_PATH"] = _db_path
+os.environ["MOCKFOLIO_DATA_DIR"] = tempfile.mkdtemp(prefix="mockfolio_data_")
 os.environ["MOCKFOLIO_DISABLE_SCHEDULER"] = "1"
 os.environ.setdefault("SECRET_KEY", "test-secret-key")
 os.environ.setdefault("FLASK_ENV", "testing")
 
 import app as app_module  # noqa: E402
-
-app_module.init_db()
-
+from mockfolio.db import get_db  # noqa: E402
 
 _TABLES = [
     "trades", "positions", "portfolio_snapshots", "autopilot_log",
@@ -30,7 +29,7 @@ _TABLES = [
 def _clean_db():
     """Wipe all tables before each test so tests don't leak state into each other."""
     with app_module.app.app_context():
-        db = app_module.get_db()
+        db = get_db()
         for table in _TABLES:
             db.execute(f"DELETE FROM {table}")
         db.commit()
