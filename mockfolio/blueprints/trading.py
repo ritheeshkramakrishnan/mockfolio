@@ -216,9 +216,11 @@ def api_positions():
 def api_montecarlo():
     data = request.get_json()
     symbol = data.get("symbol", "SPY").upper()
-    days = int(data.get("days", 252))
-    simulations = int(data.get("simulations", 500))
-    simulations = min(simulations, 1000)  # cap
+    try:
+        days = int(data.get("days", 252))
+        simulations = min(int(data.get("simulations", 500)), 1000)  # cap
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid parameters"}), 400
 
     try:
         hist = market._fetch_hist(symbol, days=370)

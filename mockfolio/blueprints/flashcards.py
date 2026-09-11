@@ -36,7 +36,10 @@ def get_flash_progress():
 def update_flash_progress():
     data = request.get_json()
     card_id = data.get("card_id")
-    known = int(data.get("known", 0))
+    try:
+        known = int(data.get("known", 0))
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid parameters"}), 400
     db = get_db()
     user = current_user()
     db.execute("""

@@ -81,6 +81,14 @@ The app starts on `http://localhost:5000` using a local SQLite database (`mockfo
 | `PORT` | No | Port to bind (defaults to `5000`; set automatically by Railway). |
 | `MOCKFOLIO_DB_PATH` / `MOCKFOLIO_DATA_DIR` / `MOCKFOLIO_DISABLE_SCHEDULER` | No | Test-only overrides used by the pytest suite to isolate the database, JSON/CSV backup directory, and background scheduler from your real local data. Not needed for normal local development or deployment. |
 
+## Security
+
+- **Passwords** are hashed with `werkzeug.security` (scrypt/pbkdf2 with a per-password salt). Accounts created before this change are transparently upgraded to the new hash the next time they log in — no forced reset needed.
+- **Rate limiting** (`Flask-Limiter`) throttles `/login`, `/register`, `/forgot-password`, and `/api/reset-password` to slow down credential stuffing and brute-force attempts. Uses in-memory storage, which is fine for this app's single-worker deployment — if you scale to multiple gunicorn workers, switch to a shared backend (Redis) per the [Flask-Limiter docs](https://flask-limiter.readthedocs.io).
+- **Session cookies** are `HttpOnly`, `SameSite=Lax`, and `Secure` in production.
+- **`SECRET_KEY`** is required when `FLASK_ENV=production` — the app refuses to start without it, rather than silently generating a per-process key that would break sessions on every restart/redeploy.
+- Auth endpoints require JSON bodies (no form-encoded fallback), so state-changing requests can't be triggered by a plain cross-site `<form>` POST.
+
 ## Testing
 
 ```bash

@@ -176,9 +176,12 @@ def api_autopilot_config_set():
     user = current_user()
     db = get_db()
 
-    budget = float(data.get("budget", 0))
-    max_pct = float(data.get("max_pct", 20))
-    daily_loss_limit = float(data.get("daily_loss_limit", 500))
+    try:
+        budget = float(data.get("budget", 0))
+        max_pct = float(data.get("max_pct", 20))
+        daily_loss_limit = float(data.get("daily_loss_limit", 500))
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid parameters"}), 400
 
     # clamp values
     budget = max(0, budget)

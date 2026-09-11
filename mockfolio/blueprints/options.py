@@ -134,9 +134,12 @@ def api_options_strategy():
     strategy = data.get("strategy", "")   # straddle | bull_call_spread | bear_put_spread | covered_call
     symbol = data.get("symbol", "").upper()
     expiry = data.get("expiry", "")
-    strike1 = float(data.get("strike1", 0))
-    strike2 = float(data.get("strike2", 0))
-    qty = int(data.get("qty", 1))
+    try:
+        strike1 = float(data.get("strike1", 0))
+        strike2 = float(data.get("strike2", 0))
+        qty = int(data.get("qty", 1))
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid parameters"}), 400
 
     user = current_user()
     db = get_db()

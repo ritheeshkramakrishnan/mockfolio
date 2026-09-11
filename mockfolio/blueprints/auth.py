@@ -1,18 +1,34 @@
 """Authentication: register/login/logout, and password reset."""
 import hashlib
+import re
 import secrets
 from datetime import datetime, timedelta
 from functools import wraps
 
 from flask import Blueprint, jsonify, redirect, render_template, request, session, url_for
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from mockfolio.db import get_db
+from mockfolio.limiter import limiter
 
 bp = Blueprint("auth", __name__)
 
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
 
 def hash_pw(pw: str) -> str:
-    return hashlib.sha256(pw.encode()).hexdigest()
+    """Hash a new password. Legacy accounts (see verify_password) are
+    transparently upgraded to this format the next time they log in."""
+    return generate_password_hash(pw)
+
+
+def verify_password(stored_hash: str, password: str) -> bool:
+    """Verify against either the current werkzeug hash format or the legacy
+    unsalted-SHA256 format used before the security hardening pass."""
+    if "$" in stored_hash:
+        return check_password_hash(stored_hash, password)
+    # legacy format: bare sha256 hex digest
+    return stored_hash == hashlib.sha256(password.encode()).hexdigest()
 
 
 def login_required(f):
@@ -39,17 +55,19 @@ def index():
 
 
 @bp.route("/login", methods=["GET", "POST"])
+@limiter.limit("10 per minute", methods=["POST"])
 def login():
     if request.method == "POST":
-        data = request.get_json() or request.form
+        data = request.get_json(silent=True) or {}
         email = data.get("email", "").strip().lower()
         password = data.get("password", "")
         db = get_db()
-        user = db.execute(
-            "SELECT * FROM users WHERE email=? AND password=?",
-            (email, hash_pw(password))
-        ).fetchone()
-        if user:
+        user = db.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+        if user and verify_password(user["password"], password):
+            if "$" not in user["password"]:
+                # lazy-migrate legacy sha256 hashes to the current format
+                db.execute("UPDATE users SET password=? WHERE id=?", (hash_pw(password), user["id"]))
+                db.commit()
             session["user_id"] = user["id"]
             return jsonify({"ok": True, "redirect": "/dashboard"})
         return jsonify({"ok": False, "error": "Invalid email or password"}), 401
@@ -57,14 +75,21 @@ def login():
 
 
 @bp.route("/register", methods=["GET", "POST"])
+@limiter.limit("10 per minute", methods=["POST"])
 def register():
     if request.method == "POST":
-        data = request.get_json() or request.form
+        data = request.get_json(silent=True) or {}
         username = data.get("username", "").strip()
         email = data.get("email", "").strip().lower()
         password = data.get("password", "")
         if not username or not email or not password:
             return jsonify({"ok": False, "error": "All fields required"}), 400
+        if not (3 <= len(username) <= 32) or not re.match(r"^[A-Za-z0-9_.-]+$", username):
+            return jsonify({"ok": False, "error": "Username must be 3-32 characters (letters, numbers, . _ -)"}), 400
+        if not _EMAIL_RE.match(email):
+            return jsonify({"ok": False, "error": "Enter a valid email address"}), 400
+        if len(password) < 8:
+            return jsonify({"ok": False, "error": "Password must be at least 8 characters"}), 400
         db = get_db()
         try:
             db.execute(
@@ -130,11 +155,12 @@ If you didn't request this, ignore this email.
 
 
 @bp.route("/forgot-password", methods=["GET", "POST"])
+@limiter.limit("5 per minute", methods=["POST"])
 def forgot_password():
     if request.method == "GET":
         return render_template("forgot_password.html")
 
-    data = request.get_json() or request.form
+    data = request.get_json(silent=True) or {}
     email = (data.get("email") or "").strip().lower()
     if not email:
         return jsonify({"ok": False, "error": "Email is required"}), 400
@@ -174,13 +200,14 @@ def reset_password_page(token):
 
 
 @bp.route("/api/reset-password", methods=["POST"])
+@limiter.limit("5 per minute")
 def api_reset_password():
     data = request.get_json() or {}
     token = data.get("token", "")
     password = data.get("password", "")
 
-    if not token or not password or len(password) < 6:
-        return jsonify({"ok": False, "error": "Invalid request — password must be at least 6 characters"}), 400
+    if not token or not password or len(password) < 8:
+        return jsonify({"ok": False, "error": "Invalid request — password must be at least 8 characters"}), 400
 
     db = get_db()
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
