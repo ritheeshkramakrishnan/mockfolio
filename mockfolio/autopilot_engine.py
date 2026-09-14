@@ -500,7 +500,13 @@ def scan_ts_load():
         db.close()
         if row:
             data = json.loads(row["value"])
-            return datetime.fromisoformat(data["ts"])
+            ts = datetime.fromisoformat(data["ts"])
+            if ts.tzinfo is None:
+                # legacy value saved with naive server-local time before the
+                # ET-timezone fix — discard rather than risk comparing it
+                # against an aware datetime or displaying the wrong hour.
+                return None
+            return ts
     except Exception as e:
         print(f"[scheduler] scan ts load error: {e}")
     return None
@@ -552,7 +558,7 @@ def autopilot_scan_all():
                     run_autopilot(u["id"], db)
                 except Exception as e:
                     print(f"[scheduler] user {u['id']} error: {e}")
-            _last_autopilot_scan = datetime.now()
+            _last_autopilot_scan = market._et_now()
             _scan_ts_save(_last_autopilot_scan)
         else:
             print(f"[scheduler] market closed ({mkt['label']}) — skipping live trades")

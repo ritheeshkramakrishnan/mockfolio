@@ -451,6 +451,7 @@ function renderFeed(logs) {
 
 // ── scan countdown ─────────────────────────────────────────────────────────
 let _nextScanAt = null;
+let _scanMarketOpen = true;
 
 async function loadScanStatus() {
   try {
@@ -458,6 +459,7 @@ async function loadScanStatus() {
     if (!r.ok) return;
     const d = await r.json();
     _nextScanAt = Date.now() + d.next_scan_secs * 1000;
+    _scanMarketOpen = d.market_open;
     const lastEl = document.getElementById('lastScanLabel');
     if (lastEl) lastEl.textContent = d.last_scan ? `Last scan: ${d.last_scan}` : 'Not yet scanned this session';
   } catch(e) {}
@@ -466,6 +468,7 @@ async function loadScanStatus() {
 function tickScanCountdown() {
   const el = document.getElementById('scanCountdown');
   const bar = document.getElementById('scanBar');
+  const label = bar ? bar.querySelector('span') : null;
   if (!el || !_stats) return;
 
   // only show scan bar when autopilot is on
@@ -475,6 +478,15 @@ function tickScanCountdown() {
     bar.style.display = 'none';
     return;
   }
+
+  // Scans only run during market hours — a live countdown while closed would
+  // just sit at 0:00 forever and look broken, so say so instead.
+  if (!_scanMarketOpen) {
+    if (label) label.textContent = 'Market closed — autopilot resumes at next open —';
+    el.textContent = '—';
+    return;
+  }
+  if (label) label.textContent = 'Auto-scanning every 5 min —';
 
   if (!_nextScanAt) { el.textContent = '—'; return; }
   const secs = Math.max(0, Math.round((_nextScanAt - Date.now()) / 1000));

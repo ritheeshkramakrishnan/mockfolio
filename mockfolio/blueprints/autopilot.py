@@ -119,15 +119,18 @@ def autopilot_page():
 @bp.route("/api/autopilot/scan-status")
 @login_required
 def api_autopilot_scan_status():
-    now = datetime.now()
+    mkt = market.market_status()
+    now = market._et_now()
     INTERVAL = 5 * 60  # seconds
     # Load from DB if in-memory value was lost (e.g. after a restart)
     last = autopilot_engine._last_autopilot_scan or autopilot_engine.scan_ts_load()
     if last:
         autopilot_engine._last_autopilot_scan = last   # repopulate in-memory for next call
         secs_since = (now - last).total_seconds()
-        secs_until = max(0, INTERVAL - secs_since)
-        last_str = last.strftime("%H:%M:%S")
+        # Only count down while the market is open — scans don't run otherwise,
+        # so a countdown against a frozen timestamp would just sit at 0 forever.
+        secs_until = max(0, INTERVAL - secs_since) if mkt["open"] else INTERVAL
+        last_str = last.strftime("%H:%M:%S ET")
     else:
         secs_until = INTERVAL
         last_str = None
@@ -135,6 +138,7 @@ def api_autopilot_scan_status():
         "last_scan": last_str,
         "next_scan_secs": int(secs_until),
         "interval_secs": INTERVAL,
+        "market_open": mkt["open"],
     })
 
 
