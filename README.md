@@ -16,11 +16,11 @@ A paper-trading platform for learning to invest without risking real money. User
 
 ## Tech stack
 
-- **Backend**: Flask (Python), SQLite locally / PostgreSQL in production (Railway), APScheduler for background jobs (autopilot scans, signal refresh).
+- **Backend**: Flask (Python), SQLite locally / PostgreSQL in production, APScheduler for background jobs (autopilot scans, signal refresh).
 - **Frontend**: server-rendered Jinja templates + vanilla JS/CSS (`static/`, `templates/`).
 - **Data**: Twelve Data (live quotes), Stooq (EOD fallback), RSS feeds (MarketWatch, Reuters, CNBC, Yahoo Finance, AP) for news-driven signals.
 - **AI**: Groq-backed chat for the AI tutor and autopilot reasoning, with graceful fallback when no API key is set.
-- **Deployment**: Railway, via `Procfile` (`gunicorn`) and `runtime.txt` (Python 3.11).
+- **Deployment**: [Render](https://render.com), via `Procfile` (`gunicorn`), `runtime.txt` (Python 3.11), and `render.yaml` (infra-as-code blueprint).
 
 ## Architecture
 
@@ -73,12 +73,12 @@ The app starts on `http://localhost:5000` using a local SQLite database (`mockfo
 | Variable | Required | Purpose |
 |---|---|---|
 | `SECRET_KEY` | Yes (production) | Flask session-signing key. Without it, a random key is generated per process — sessions won't survive a restart or work across multiple workers. Always set this explicitly outside local dev. |
-| `DATABASE_URL` | No | PostgreSQL connection string (e.g. from Railway). When unset, the app uses local SQLite (`mockfolio.db`). |
+| `DATABASE_URL` | No | PostgreSQL connection string (e.g. from Render). When unset, the app uses local SQLite (`mockfolio.db`). |
 | `GROQ_API_KEY` | No | Enables the AI chat tutor and AI-generated autopilot reasoning. Without it, the app falls back to rule-based responses. |
 | `TWELVEDATA_API_KEY` | No | Enables live quotes. Without it, prices fall back to end-of-day data (Stooq) or a simulated random walk. |
 | `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` / `SMTP_PORT` | No | Enables password-reset emails. |
 | `FLASK_ENV` | No | Set to `production` in deployment to disable debug/template auto-reload. |
-| `PORT` | No | Port to bind (defaults to `5000`; set automatically by Railway). |
+| `PORT` | No | Port to bind (defaults to `5000`; set automatically by Render). |
 | `MOCKFOLIO_DB_PATH` / `MOCKFOLIO_DATA_DIR` / `MOCKFOLIO_DISABLE_SCHEDULER` | No | Test-only overrides used by the pytest suite to isolate the database, JSON/CSV backup directory, and background scheduler from your real local data. Not needed for normal local development or deployment. |
 
 ## Security
@@ -100,4 +100,13 @@ Tests run against a temporary SQLite database (never your local `mockfolio.db`) 
 
 ## Deployment
 
-Deployed on [Railway](https://railway.app) using the included `Procfile` (`gunicorn app:app`) and `runtime.txt`. Set `DATABASE_URL` to a Railway PostgreSQL instance and the environment variables above via the Railway dashboard.
+Deployed on [Render](https://render.com). Two options:
+
+**Blueprint (recommended)** — the included `render.yaml` provisions the web service and a free PostgreSQL database together:
+1. Push this repo to GitHub, then in the Render dashboard: **New → Blueprint**, pick the repo.
+2. Render reads `render.yaml`, creates the web service + database, and wires `DATABASE_URL` automatically.
+3. Fill in `GROQ_API_KEY` and `TWELVEDATA_API_KEY` in the service's **Environment** tab (marked `sync: false` in the blueprint, so Render prompts for them rather than committing secrets to the repo). `SECRET_KEY` is generated for you.
+
+**Manual** — New → Web Service, point at the repo. Render auto-detects the `Procfile` (`gunicorn app:app`) as the start command and `runtime.txt` for the Python version. Add a PostgreSQL instance separately and set `DATABASE_URL` plus the environment variables above in the service's dashboard.
+
+Render's free tier spins the service down after inactivity (a request takes a few seconds to wake it back up) and free PostgreSQL instances expire after 90 days — recreate the database and update `DATABASE_URL` when that happens, or upgrade to a paid instance.

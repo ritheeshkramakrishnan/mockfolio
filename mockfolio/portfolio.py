@@ -1,5 +1,5 @@
 """Portfolio bookkeeping: phase promotion, value snapshots, and the JSON/CSV
-local backup used to survive a Railway redeploy wiping the database."""
+local backup used to survive a redeploy wiping an ephemeral database."""
 import csv
 import json
 import os
@@ -90,7 +90,7 @@ def export_backup(db):
 
 
 def import_backup(db):
-    """Restore from backup.json if the DB has no users (e.g. after Railway redeploy)."""
+    """Restore from backup.json if the DB has no users (e.g. after a redeploy on an ephemeral filesystem)."""
     if not os.path.exists(BACKUP_PATH):
         return
     try:

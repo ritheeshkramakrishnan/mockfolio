@@ -1,4 +1,4 @@
-"""Database backend: PostgreSQL on Railway (via DATABASE_URL), SQLite locally.
+"""Database backend: PostgreSQL in production (via DATABASE_URL, e.g. on Render), SQLite locally.
 
 `get_db()`/`close_db()` are for use inside a Flask request (they use `flask.g`).
 `raw_connection()` is for code that runs outside a request context (the
@@ -15,9 +15,9 @@ DB_PATH = os.environ.get("MOCKFOLIO_DB_PATH") or os.path.join(
 STARTING_BALANCE = 50_000.0  # paper money
 PROFIT_TARGET_PCT = 0.15      # 15% → must reach $57,500 to go funded
 
-# ── database backend (PostgreSQL on Railway, SQLite locally) ─────────────────
+# ── database backend (PostgreSQL in production, SQLite locally) ──────────────
 _DB_URL = os.environ.get("DATABASE_URL", "")
-if _DB_URL.startswith("postgres://"):          # Railway uses legacy prefix
+if _DB_URL.startswith("postgres://"):          # some hosts (Render, Heroku) use the legacy prefix
     _DB_URL = _DB_URL.replace("postgres://", "postgresql://", 1)
 USE_POSTGRES = bool(_DB_URL)
 

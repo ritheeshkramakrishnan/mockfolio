@@ -15,7 +15,7 @@ def create_app() -> Flask:
             raise RuntimeError(
                 "SECRET_KEY environment variable is required in production — "
                 "without it, sessions break on every restart/redeploy and across "
-                "gunicorn workers. Set it in your Railway (or other host) environment variables."
+                "gunicorn workers. Set it in your Render (or other host) environment variables."
             )
         secret_key = secrets.token_hex(32)
     app.secret_key = secret_key

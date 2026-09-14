@@ -70,7 +70,7 @@ def api_autopilot_run():
         if not row or not row["autopilot"]:
             return jsonify({"ok": False, "message": "Autopilot is off — enable it first using the toggle button"}), 400
         if not ai_client._ai_client:
-            return jsonify({"ok": False, "message": "No Groq API key — add GROQ_API_KEY to Railway variables"}), 400
+            return jsonify({"ok": False, "message": "No Groq API key — add GROQ_API_KEY in your Render environment variables"}), 400
         results = autopilot_engine.run_autopilot(user["id"], db)
         return jsonify({"ok": True, "trades": results})
     except RuntimeError as e:
@@ -89,7 +89,7 @@ def api_autopilot_cover_losses():
     Does NOT require autopilot to be enabled — available as a standalone action.
     """
     if not ai_client._ai_client:
-        return jsonify({"ok": False, "message": "No Groq API key — add GROQ_API_KEY to Railway variables"}), 400
+        return jsonify({"ok": False, "message": "No Groq API key — add GROQ_API_KEY in your Render environment variables"}), 400
     try:
         user = current_user()
         db = get_db()
