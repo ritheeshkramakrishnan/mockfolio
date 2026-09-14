@@ -20,7 +20,7 @@ A paper-trading platform for learning to invest without risking real money. User
 - **Frontend**: server-rendered Jinja templates + vanilla JS/CSS (`static/`, `templates/`).
 - **Data**: Twelve Data (live quotes), Stooq (EOD fallback), RSS feeds (MarketWatch, Reuters, CNBC, Yahoo Finance, AP) for news-driven signals.
 - **AI**: Groq-backed chat for the AI tutor and autopilot reasoning, with graceful fallback when no API key is set.
-- **Deployment**: [Render](https://render.com), via `Procfile` (`gunicorn`), `runtime.txt` (Python 3.11), and `render.yaml` (infra-as-code blueprint).
+- **Deployment**: [Render](https://render.com), via `Procfile` (`gunicorn`) and `render.yaml` (infra-as-code blueprint, which also pins the Python version).
 
 ## Architecture
 
@@ -107,6 +107,6 @@ Deployed on [Render](https://render.com). Two options:
 2. Render reads `render.yaml`, creates the web service + database, and wires `DATABASE_URL` automatically.
 3. Fill in `GROQ_API_KEY` and `TWELVEDATA_API_KEY` in the service's **Environment** tab (marked `sync: false` in the blueprint, so Render prompts for them rather than committing secrets to the repo). `SECRET_KEY` is generated for you.
 
-**Manual** — New → Web Service, point at the repo. Render auto-detects the `Procfile` (`gunicorn app:app`) as the start command and `runtime.txt` for the Python version. Add a PostgreSQL instance separately and set `DATABASE_URL` plus the environment variables above in the service's dashboard.
+**Manual** — New → Web Service, point at the repo. Render auto-detects the `Procfile` (`gunicorn app:app`) as the start command, but does **not** read `runtime.txt` — set a `PYTHON_VERSION` environment variable (e.g. `3.11.9`) explicitly, or the build may default to a newer Python with no prebuilt wheel for `pandas==2.2.2`/`numpy==1.26.4` and fail trying to build them from source. Add a PostgreSQL instance separately and set `DATABASE_URL` plus the environment variables above in the service's dashboard.
 
 Render's free tier spins the service down after inactivity (a request takes a few seconds to wake it back up) and free PostgreSQL instances expire after 90 days — recreate the database and update `DATABASE_URL` when that happens, or upgrade to a paid instance.
